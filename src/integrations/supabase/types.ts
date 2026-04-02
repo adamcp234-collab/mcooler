@@ -125,6 +125,7 @@ export type Database = {
           longitude: number | null
           mitra_id: string
           operational_hours: Json | null
+          registration_status: Database["public"]["Enums"]["vendor_reg_status"]
           slug: string
           updated_at: string | null
           whatsapp_number: string
@@ -139,6 +140,7 @@ export type Database = {
           longitude?: number | null
           mitra_id: string
           operational_hours?: Json | null
+          registration_status?: Database["public"]["Enums"]["vendor_reg_status"]
           slug: string
           updated_at?: string | null
           whatsapp_number: string
@@ -153,6 +155,7 @@ export type Database = {
           longitude?: number | null
           mitra_id?: string
           operational_hours?: Json | null
+          registration_status?: Database["public"]["Enums"]["vendor_reg_status"]
           slug?: string
           updated_at?: string | null
           whatsapp_number?: string
@@ -317,6 +320,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_photos: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          is_required: boolean
+          mitra_id: string
+          photo_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          is_required?: boolean
+          mitra_id: string
+          photo_type: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          is_required?: boolean
+          mitra_id?: string
+          photo_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -343,6 +376,7 @@ export type Database = {
         | "on_progress"
         | "done"
         | "cancelled"
+      vendor_reg_status: "pending_verification" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -478,6 +512,7 @@ export const Constants = {
         "done",
         "cancelled",
       ],
+      vendor_reg_status: ["pending_verification", "verified", "rejected"],
     },
   },
 } as const
