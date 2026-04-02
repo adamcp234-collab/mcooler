@@ -307,13 +307,20 @@ export default function VendorDashboard() {
 // Lazy map for settings
 function MapPickerLazy() {
   const [show, setShow] = useState(false);
-  if (!show) {
+  const [MapComp, setMapComp] = useState<React.ComponentType<any> | null>(null);
+
+  const handleShow = async () => {
+    const mod = await import("@/components/MapPicker");
+    setMapComp(() => mod.default);
+    setShow(true);
+  };
+
+  if (!show || !MapComp) {
     return (
-      <Button variant="outline" size="sm" onClick={() => setShow(true)} className="w-full">
+      <Button variant="outline" size="sm" onClick={handleShow} className="w-full">
         <MapPin className="w-4 h-4 mr-1" /> Atur Lokasi di Map
       </Button>
     );
   }
-  const MapPicker = require("@/components/MapPicker").default;
-  return <MapPicker onChange={() => {}} height="200px" />;
+  return <MapComp onChange={() => {}} height="200px" />;
 }
