@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Package, AlertCircle, Clock, CheckCircle, MapPin
+  Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -9,10 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import {
   fetchOrdersByMitra,
   fetchStatusLogs,
@@ -20,17 +18,20 @@ import {
   fetchMitraServices,
 } from "@/lib/api";
 import { STATUS_LABELS, STATUS_COLORS, type OrderStatus } from "@/data/services";
-
-// For demo: use first mitra or logged-in user
-const DEMO_MITRA_ID = null as string | null; // Will be set from auth
+import { useAuth } from "@/hooks/useAuth";
 
 export default function VendorDashboard() {
+  const navigate = useNavigate();
+  const { user, isVendor, loading, mitraId, registrationStatus, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("orders");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // TODO: Get from auth context
-  const mitraId = DEMO_MITRA_ID;
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/vendor/auth", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["vendor-orders", mitraId],
@@ -75,14 +76,37 @@ export default function VendorDashboard() {
     return flow[status] || null;
   };
 
-  if (!mitraId) {
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
+
+  if (!user) return null;
+
+  // Pending verification state
+  if (registrationStatus === "pending_verification") {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container max-w-lg px-4 py-20 text-center">
-          <h1 className="text-xl font-bold text-foreground mb-2">Dashboard Vendor</h1>
-          <p className="text-muted-foreground mb-4">Silakan login sebagai vendor untuk mengakses dashboard.</p>
-          <Button onClick={() => toast.info("Fitur login akan segera tersedia")}>Login</Button>
+          <Clock className="w-16 h-16 mx-auto text-warning mb-4" />
+          <h1 className="text-xl font-bold text-foreground mb-2">Menunggu Verifikasi</h1>
+          <p className="text-muted-foreground mb-4">
+            Akun Anda sedang dalam proses verifikasi oleh admin. Anda akan mendapat akses penuh setelah akun diverifikasi.
+          </p>
+          <Button variant="outline" onClick={() => navigate("/vendor/onboarding")}>Lengkapi Data</Button>
+          <Button variant="ghost" className="ml-2" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Logout</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (registrationStatus === "rejected") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container max-w-lg px-4 py-20 text-center">
+          <AlertCircle className="w-16 h-16 mx-auto text-destructive mb-4" />
+          <h1 className="text-xl font-bold text-foreground mb-2">Pendaftaran Ditolak</h1>
+          <p className="text-muted-foreground mb-4">Mohon maaf, pendaftaran Anda ditolak. Hubungi admin untuk informasi lebih lanjut.</p>
+          <Button variant="ghost" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Logout</Button>
         </div>
       </div>
     );
@@ -92,6 +116,11 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-background">
       <Header mitraName="Dashboard Vendor" />
       <div className="container max-w-2xl px-4 py-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Logout</Button>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
           {[
