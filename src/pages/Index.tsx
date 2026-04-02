@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom";
-import { Snowflake, Wrench, MapPin, Clock, Star, ArrowRight, Shield, Zap } from "lucide-react";
+import { Snowflake, Wrench, MapPin, Zap, Shield, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
-import { MOCK_MITRAS } from "@/data/mockData";
+import { fetchActiveMitras } from "@/lib/api";
 
 export default function Index() {
+  const { data: mitras = [] } = useQuery({
+    queryKey: ["active-mitras"],
+    queryFn: fetchActiveMitras,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -56,11 +62,7 @@ export default function Index() {
             { name: "Pasang AC", price: "Mulai Rp 250.000", icon: "🔧" },
             { name: "Pengecekan AC", price: "Mulai Rp 50.000", icon: "🔍" },
           ].map((s) => (
-            <Link
-              key={s.name}
-              to="/booking"
-              className="flex items-center gap-3 bg-card border border-border rounded-lg p-3 hover:border-primary/30 transition-colors"
-            >
+            <Link key={s.name} to="/booking" className="flex items-center gap-3 bg-card border border-border rounded-lg p-3 hover:border-primary/30 transition-colors">
               <span className="text-2xl">{s.icon}</span>
               <div className="flex-1">
                 <p className="font-medium text-sm text-foreground">{s.name}</p>
@@ -73,27 +75,25 @@ export default function Index() {
       </section>
 
       {/* Mitra Partners */}
-      <section className="container max-w-lg px-4 pb-10">
-        <h2 className="text-lg font-bold text-foreground mb-4">Mitra Kami</h2>
-        <div className="space-y-2">
-          {MOCK_MITRAS.filter(m => m.isActive).map((m) => (
-            <Link
-              key={m.id}
-              to={`/${m.slug}`}
-              className="flex items-center gap-3 bg-card border border-border rounded-lg p-3 hover:border-primary/30 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Wrench className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm text-foreground">{m.companyName}</p>
-                <p className="text-xs text-muted-foreground">{m.addressFull}</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-          ))}
-        </div>
-      </section>
+      {mitras.length > 0 && (
+        <section className="container max-w-lg px-4 pb-10">
+          <h2 className="text-lg font-bold text-foreground mb-4">Mitra Kami</h2>
+          <div className="space-y-2">
+            {mitras.map((m) => (
+              <Link key={m.mitra_id} to={`/${m.slug}`} className="flex items-center gap-3 bg-card border border-border rounded-lg p-3 hover:border-primary/30 transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Wrench className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm text-foreground">{m.company_name}</p>
+                  <p className="text-xs text-muted-foreground">{m.address_full}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">

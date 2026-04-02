@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CalendarIcon, Clock, User, Phone, FileText, ArrowRight, ArrowLeft, ChevronDown } from "lucide-react";
+import { CalendarIcon, User, Phone, FileText, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import OrderStepper from "@/components/OrderStepper";
 import ServiceSelector from "@/components/ServiceSelector";
@@ -14,10 +15,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { MOCK_MITRAS, findNearestMitra, type Mitra } from "@/data/mockData";
+import {
+  fetchActiveMitras,
+  fetchMitraBySlug,
+  fetchMitraServices,
+  createOrder,
+  findNearestMitraFromList,
+} from "@/lib/api";
 
 const STEPS = ["Layanan", "Lokasi", "Jadwal", "Data Diri"];
-
 const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
   const h = Math.floor(i / 2) + 8;
   const m = i % 2 === 0 ? "00" : "30";
@@ -28,7 +34,19 @@ export default function BookingPage() {
   const { mitraSlug } = useParams();
   const navigate = useNavigate();
 
-  const mitra = mitraSlug ? MOCK_MITRAS.find((m) => m.slug === mitraSlug) : null;
+  // Fetch mitra by slug if provided
+  const { data: slugMitra, isLoading: loadingSlug } = useQuery({
+    queryKey: ["mitra-slug", mitraSlug],
+    queryFn: () => fetchMitraBySlug(mitraSlug!),
+    enabled: !!mitraSlug,
+  });
+
+  // Fetch all active mitras for nearest lookup
+  const { data: allMitras } = useQuery({
+    queryKey: ["active-mitras"],
+    queryFn: fetchActiveMitras,
+    enabled: !mitraSlug,
+  });
 
   const [step, setStep] = useState(0);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -41,25 +59,51 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Determine the effective mitra (direct or nearest)
-  const effectiveMitra = useMemo<Mitra | null>(() => {
-    if (mitra) return mitra;
-    if (location) return findNearestMitra(location.lat, location.lng);
-    return MOCK_MITRAS[0]; // fallback for service listing
-  }, [mitra, location]);
+  // Determine effective mitra
+  const effectiveMitraId = useMemo(() => {
+    if (slugMitra) return slugMitra.mitra_id;
+    if (location && allMitras && allMitras.length > 0) {
+      const nearest = findNearestMitraFromList(allMitras, location.lat, location.lng);
+      return nearest?.mitra_id || null;
+    }
+    return allMitras?.[0]?.mitra_id || null;
+  }, [slugMitra, allMitras, location]);
 
-  const services = effectiveMitra?.services || [];
+  const effectiveMitraName = useMemo(() => {
+    if (slugMitra) return slugMitra.company_name;
+    if (effectiveMitraId && allMitras) {
+      return allMitras.find((m) => m.mitra_id === effectiveMitraId)?.company_name || null;
+    }
+    return null;
+  }, [slugMitra, effectiveMitraId, allMitras]);
 
-  const selectedServiceDetails = useMemo(() => {
-    return services.filter((s) => selectedServices.includes(s.serviceId));
-  }, [services, selectedServices]);
+  // Fetch services for effective mitra
+  const { data: services = [] } = useQuery({
+    queryKey: ["mitra-services", effectiveMitraId],
+    queryFn: () => fetchMitraServices(effectiveMitraId!),
+    enabled: !!effectiveMitraId,
+  });
 
+  const selectorServices = useMemo(
+    () =>
+      services.map((s) => ({
+        serviceId: s.id,
+        serviceName: s.service_name,
+        price: s.price,
+        isActive: s.is_active ?? true,
+        description: s.description || "",
+      })),
+    [services]
+  );
+
+  const selectedServiceDetails = useMemo(
+    () => selectorServices.filter((s) => selectedServices.includes(s.serviceId)),
+    [selectorServices, selectedServices]
+  );
   const totalPrice = selectedServiceDetails.reduce((sum, s) => sum + s.price, 0);
 
   const toggleService = (id: string) => {
-    setSelectedServices((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+    setSelectedServices((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
   const canNext = () => {
@@ -72,23 +116,36 @@ export default function BookingPage() {
     }
   };
 
-  const handleSubmit = () => {
-    if (!canNext()) return;
+  const handleSubmit = async () => {
+    if (!canNext() || !effectiveMitraId || !date) return;
     setSubmitting(true);
-
-    const finalMitra = mitra || (location ? findNearestMitra(location.lat, location.lng) : null);
-
-    setTimeout(() => {
-      const orderId = `ORD-${format(new Date(), "yyyyMMdd")}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
-      toast.success("Order berhasil dibuat!", {
-        description: `No. Order: ${orderId}`,
+    try {
+      const order = await createOrder({
+        mitraId: effectiveMitraId,
+        custName: name,
+        custWhatsapp: whatsapp,
+        custLatitude: location?.lat,
+        custLongitude: location?.lng,
+        custAddressDetail: address,
+        bookingDate: date,
+        bookingTime: time,
+        notes,
+        selectedServices: selectedServiceDetails.map((s) => ({
+          serviceId: s.serviceId,
+          serviceName: s.serviceName,
+          price: s.price,
+        })),
       });
-      navigate(`/order-success/${orderId}`);
+      toast.success("Order berhasil dibuat!", { description: `No. Order: ${order.order_id}` });
+      navigate(`/order-success/${order.order_id}`);
+    } catch (err: any) {
+      toast.error("Gagal membuat order", { description: err.message });
+    } finally {
       setSubmitting(false);
-    }, 1500);
+    }
   };
 
-  if (mitraSlug && !mitra) {
+  if (mitraSlug && !loadingSlug && !slugMitra) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -103,13 +160,10 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header mitraName={mitra?.companyName} />
-
+      <Header mitraName={effectiveMitraName || undefined} />
       <div className="container max-w-lg px-4 py-6 space-y-6">
-        {/* Stepper */}
         <OrderStepper steps={STEPS} currentStep={step} />
 
-        {/* Step Content */}
         <div className="animate-fade-in">
           {step === 0 && (
             <div className="space-y-4">
@@ -117,19 +171,17 @@ export default function BookingPage() {
                 <h2 className="text-lg font-bold text-foreground">Pilih Layanan</h2>
                 <p className="text-sm text-muted-foreground">Pilih satu atau lebih layanan yang Anda butuhkan</p>
               </div>
-              <ServiceSelector
-                services={services}
-                selected={selectedServices}
-                onToggle={toggleService}
-              />
+              {selectorServices.length > 0 ? (
+                <ServiceSelector services={selectorServices} selected={selectedServices} onToggle={toggleService} />
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  {effectiveMitraId ? "Memuat layanan..." : "Belum ada mitra tersedia saat ini."}
+                </p>
+              )}
               {selectedServices.length > 0 && (
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center">
-                  <span className="text-sm font-medium text-foreground">
-                    {selectedServices.length} layanan dipilih
-                  </span>
-                  <span className="font-bold text-primary">
-                    Rp {totalPrice.toLocaleString("id-ID")}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">{selectedServices.length} layanan dipilih</span>
+                  <span className="font-bold text-primary">Rp {totalPrice.toLocaleString("id-ID")}</span>
                 </div>
               )}
             </div>
@@ -139,23 +191,14 @@ export default function BookingPage() {
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-foreground">Tentukan Lokasi</h2>
-                <p className="text-sm text-muted-foreground">Geser peta atau gunakan GPS untuk menentukan lokasi</p>
+                <p className="text-sm text-muted-foreground">Geser peta atau gunakan GPS</p>
               </div>
               <MapPicker value={location || undefined} onChange={setLocation} height="280px" />
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Detail Alamat</label>
-                <Textarea
-                  placeholder="Contoh: Jl. Sudirman No. 10, RT 03/RW 02, Lantai 2"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={2}
-                />
+                <Textarea placeholder="Contoh: Jl. Sudirman No. 10, RT 03/RW 02" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
               </div>
-              {location && (
-                <p className="text-xs text-muted-foreground">
-                  📍 Koordinat: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
-                </p>
-              )}
+              {location && <p className="text-xs text-muted-foreground">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>}
             </div>
           )}
 
@@ -169,22 +212,13 @@ export default function BookingPage() {
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Tanggal</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                    >
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {date ? format(date, "EEEE, d MMMM yyyy", { locale: localeId }) : "Pilih tanggal"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(d) => d < new Date()}
-                      className="pointer-events-auto"
-                    />
+                    <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} className="pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -198,9 +232,7 @@ export default function BookingPage() {
                       onClick={() => setTime(slot)}
                       className={cn(
                         "py-2 rounded-lg text-sm font-medium border transition-colors",
-                        time === slot
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card text-foreground border-border hover:border-primary/30"
+                        time === slot ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:border-primary/30"
                       )}
                     >
                       {slot}
@@ -218,25 +250,17 @@ export default function BookingPage() {
                 <p className="text-sm text-muted-foreground">Isi data Anda untuk konfirmasi order</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  <User className="w-3.5 h-3.5 inline mr-1" /> Nama Lengkap
-                </label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block"><User className="w-3.5 h-3.5 inline mr-1" /> Nama Lengkap</label>
                 <Input placeholder="Nama Anda" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  <Phone className="w-3.5 h-3.5 inline mr-1" /> No. WhatsApp
-                </label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block"><Phone className="w-3.5 h-3.5 inline mr-1" /> No. WhatsApp</label>
                 <Input placeholder="08xxxxxxxxxx" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  <FileText className="w-3.5 h-3.5 inline mr-1" /> Catatan (opsional)
-                </label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block"><FileText className="w-3.5 h-3.5 inline mr-1" /> Catatan (opsional)</label>
                 <Textarea placeholder="Catatan tambahan..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
               </div>
-
-              {/* Order Summary */}
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
                 <h3 className="font-semibold text-foreground text-sm">Ringkasan Order</h3>
                 <div className="space-y-1">
@@ -251,22 +275,13 @@ export default function BookingPage() {
                   <span className="font-semibold text-foreground">Total</span>
                   <span className="font-bold text-primary text-lg">Rp {totalPrice.toLocaleString("id-ID")}</span>
                 </div>
-                {date && time && (
-                  <p className="text-xs text-muted-foreground">
-                    📅 {format(date, "EEEE, d MMMM yyyy", { locale: localeId })} pukul {time}
-                  </p>
-                )}
-                {effectiveMitra && (
-                  <p className="text-xs text-muted-foreground">
-                    🧑‍🔧 Mitra: {effectiveMitra.companyName}
-                  </p>
-                )}
+                {date && time && <p className="text-xs text-muted-foreground">📅 {format(date, "EEEE, d MMMM yyyy", { locale: localeId })} pukul {time}</p>}
+                {effectiveMitraName && <p className="text-xs text-muted-foreground">🧑‍🔧 Mitra: {effectiveMitraName}</p>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex gap-3">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
