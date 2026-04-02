@@ -1,0 +1,289 @@
+import { useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { CalendarIcon, Clock, User, Phone, FileText, ArrowRight, ArrowLeft, ChevronDown } from "lucide-react";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import { toast } from "sonner";
+import Header from "@/components/Header";
+import OrderStepper from "@/components/OrderStepper";
+import ServiceSelector from "@/components/ServiceSelector";
+import MapPicker from "@/components/MapPicker";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { MOCK_MITRAS, findNearestMitra, type Mitra } from "@/data/mockData";
+
+const STEPS = ["Layanan", "Lokasi", "Jadwal", "Data Diri"];
+
+const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
+  const h = Math.floor(i / 2) + 8;
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h.toString().padStart(2, "0")}:${m}`;
+});
+
+export default function BookingPage() {
+  const { mitraSlug } = useParams();
+  const navigate = useNavigate();
+
+  const mitra = mitraSlug ? MOCK_MITRAS.find((m) => m.slug === mitraSlug) : null;
+
+  const [step, setStep] = useState(0);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [address, setAddress] = useState("");
+  const [date, setDate] = useState<Date>();
+  const [time, setTime] = useState("");
+  const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Determine the effective mitra (direct or nearest)
+  const effectiveMitra = useMemo<Mitra | null>(() => {
+    if (mitra) return mitra;
+    if (location) return findNearestMitra(location.lat, location.lng);
+    return MOCK_MITRAS[0]; // fallback for service listing
+  }, [mitra, location]);
+
+  const services = effectiveMitra?.services || [];
+
+  const selectedServiceDetails = useMemo(() => {
+    return services.filter((s) => selectedServices.includes(s.serviceId));
+  }, [services, selectedServices]);
+
+  const totalPrice = selectedServiceDetails.reduce((sum, s) => sum + s.price, 0);
+
+  const toggleService = (id: string) => {
+    setSelectedServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  };
+
+  const canNext = () => {
+    switch (step) {
+      case 0: return selectedServices.length > 0;
+      case 1: return location !== null;
+      case 2: return date !== undefined && time !== "";
+      case 3: return name.trim() !== "" && whatsapp.trim().length >= 10;
+      default: return false;
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!canNext()) return;
+    setSubmitting(true);
+
+    const finalMitra = mitra || (location ? findNearestMitra(location.lat, location.lng) : null);
+
+    setTimeout(() => {
+      const orderId = `ORD-${format(new Date(), "yyyyMMdd")}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      toast.success("Order berhasil dibuat!", {
+        description: `No. Order: ${orderId}`,
+      });
+      navigate(`/order-success/${orderId}`);
+      setSubmitting(false);
+    }, 1500);
+  };
+
+  if (mitraSlug && !mitra) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Mitra tidak ditemukan</h1>
+          <p className="text-muted-foreground mb-6">Link mitra "{mitraSlug}" tidak valid.</p>
+          <Button onClick={() => navigate("/")}>Kembali ke Beranda</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header mitraName={mitra?.companyName} />
+
+      <div className="container max-w-lg px-4 py-6 space-y-6">
+        {/* Stepper */}
+        <OrderStepper steps={STEPS} currentStep={step} />
+
+        {/* Step Content */}
+        <div className="animate-fade-in">
+          {step === 0 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Pilih Layanan</h2>
+                <p className="text-sm text-muted-foreground">Pilih satu atau lebih layanan yang Anda butuhkan</p>
+              </div>
+              <ServiceSelector
+                services={services}
+                selected={selectedServices}
+                onToggle={toggleService}
+              />
+              {selectedServices.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">
+                    {selectedServices.length} layanan dipilih
+                  </span>
+                  <span className="font-bold text-primary">
+                    Rp {totalPrice.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Tentukan Lokasi</h2>
+                <p className="text-sm text-muted-foreground">Geser peta atau gunakan GPS untuk menentukan lokasi</p>
+              </div>
+              <MapPicker value={location || undefined} onChange={setLocation} height="280px" />
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Detail Alamat</label>
+                <Textarea
+                  placeholder="Contoh: Jl. Sudirman No. 10, RT 03/RW 02, Lantai 2"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={2}
+                />
+              </div>
+              {location && (
+                <p className="text-xs text-muted-foreground">
+                  📍 Koordinat: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Pilih Jadwal</h2>
+                <p className="text-sm text-muted-foreground">Tentukan tanggal dan waktu servis</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Tanggal</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "EEEE, d MMMM yyyy", { locale: localeId }) : "Pilih tanggal"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(d) => d < new Date()}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Waktu</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setTime(slot)}
+                      className={cn(
+                        "py-2 rounded-lg text-sm font-medium border transition-colors",
+                        time === slot
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-foreground border-border hover:border-primary/30"
+                      )}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Data Diri</h2>
+                <p className="text-sm text-muted-foreground">Isi data Anda untuk konfirmasi order</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  <User className="w-3.5 h-3.5 inline mr-1" /> Nama Lengkap
+                </label>
+                <Input placeholder="Nama Anda" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  <Phone className="w-3.5 h-3.5 inline mr-1" /> No. WhatsApp
+                </label>
+                <Input placeholder="08xxxxxxxxxx" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  <FileText className="w-3.5 h-3.5 inline mr-1" /> Catatan (opsional)
+                </label>
+                <Textarea placeholder="Catatan tambahan..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+              </div>
+
+              {/* Order Summary */}
+              <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-foreground text-sm">Ringkasan Order</h3>
+                <div className="space-y-1">
+                  {selectedServiceDetails.map((s) => (
+                    <div key={s.serviceId} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{s.serviceName}</span>
+                      <span className="text-foreground">Rp {s.price.toLocaleString("id-ID")}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-border pt-2 flex justify-between">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="font-bold text-primary text-lg">Rp {totalPrice.toLocaleString("id-ID")}</span>
+                </div>
+                {date && time && (
+                  <p className="text-xs text-muted-foreground">
+                    📅 {format(date, "EEEE, d MMMM yyyy", { locale: localeId })} pukul {time}
+                  </p>
+                )}
+                {effectiveMitra && (
+                  <p className="text-xs text-muted-foreground">
+                    🧑‍🔧 Mitra: {effectiveMitra.companyName}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex gap-3">
+          {step > 0 && (
+            <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Kembali
+            </Button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button onClick={() => setStep(step + 1)} disabled={!canNext()} className="flex-1 mcooler-gradient">
+              Lanjut <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={!canNext() || submitting} className="flex-1 mcooler-gradient">
+              {submitting ? "Memproses..." : "Kirim Order"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
