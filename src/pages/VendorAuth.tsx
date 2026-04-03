@@ -39,7 +39,7 @@ export default function VendorAuth() {
       toast.error(error.message);
     } else {
       toast.success("Login berhasil");
-      navigate("/vendor");
+      // useEffect will handle redirect once roles are loaded
     }
   };
 
