@@ -22,10 +22,11 @@ export default function VendorAuth() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      if (isVendor) {
-        navigate("/vendor", { replace: true });
-      }
+    if (!loading && user && isVendor) {
+      navigate("/vendor", { replace: true });
+    } else if (!loading && user && !isVendor) {
+      // User is logged in but not a vendor yet — send to onboarding
+      navigate("/vendor/onboarding", { replace: true });
     }
   }, [user, isVendor, loading, navigate]);
 
@@ -38,7 +39,7 @@ export default function VendorAuth() {
       toast.error(error.message);
     } else {
       toast.success("Login berhasil");
-      navigate("/vendor");
+      // useEffect will handle redirect once roles are loaded
     }
   };
 
