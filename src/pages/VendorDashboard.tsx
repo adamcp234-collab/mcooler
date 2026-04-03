@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
   Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut
@@ -28,16 +29,35 @@ export default function VendorDashboard() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/vendor/auth", { replace: true });
+    if (!loading) {
+      if (!user) {
+        navigate("/vendor/auth", { replace: true });
+      } else if (!isVendor && !mitraId) {
+        navigate("/vendor/onboarding", { replace: true });
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, isVendor, mitraId, loading, navigate]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["vendor-orders", mitraId],
     queryFn: () => (mitraId ? fetchOrdersByMitra(mitraId) : Promise.resolve([])),
     enabled: !!mitraId,
+    refetchInterval: 30000, // Poll every 30s as backup
   });
+
+  // Realtime subscription for order updates
+  useEffect(() => {
+    if (!mitraId) return;
+    const channel = supabase
+      .channel('vendor-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ec_order_head', filter: `mitra_id=eq.${mitraId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["vendor-orders", mitraId] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [mitraId, queryClient]);
 
   const { data: services = [] } = useQuery({
     queryKey: ["vendor-services", mitraId],

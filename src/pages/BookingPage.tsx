@@ -218,7 +218,7 @@ export default function BookingPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} className="pointer-events-auto" />
+                    <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => { const today = new Date(); today.setHours(0,0,0,0); return d < today; }} className="pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>

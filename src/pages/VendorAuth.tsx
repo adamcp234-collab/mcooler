@@ -22,8 +22,10 @@ export default function VendorAuth() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && isVendor) {
-      navigate("/vendor", { replace: true });
+    if (!loading && user) {
+      if (isVendor) {
+        navigate("/vendor", { replace: true });
+      }
     }
   }, [user, isVendor, loading, navigate]);
 

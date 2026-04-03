@@ -2,10 +2,17 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES } from "@/data/services";
-import type { MitraService } from "@/data/mockData";
+
+export interface ServiceItem {
+  serviceId: string;
+  serviceName: string;
+  price: number;
+  isActive: boolean;
+  description: string;
+}
 
 interface ServiceSelectorProps {
-  services: MitraService[];
+  services: ServiceItem[];
   selected: string[];
   onToggle: (serviceId: string) => void;
 }
@@ -14,7 +21,7 @@ export default function ServiceSelector({ services, selected, onToggle }: Servic
   const [activeCategory, setActiveCategory] = useState<string>(SERVICE_CATEGORIES[0]);
   const activeServices = services.filter((s) => s.isActive);
 
-  const grouped = SERVICE_CATEGORIES.reduce<Record<string, MitraService[]>>((acc, cat) => {
+  const grouped = SERVICE_CATEGORIES.reduce<Record<string, ServiceItem[]>>((acc, cat) => {
     const items = activeServices.filter((s) => {
       const name = s.serviceName.toLowerCase();
       switch (cat) {
@@ -33,9 +40,13 @@ export default function ServiceSelector({ services, selected, onToggle }: Servic
 
   const availableCategories = Object.keys(grouped);
 
+  // Auto-select first available category
+  const effectiveCategory = availableCategories.includes(activeCategory)
+    ? activeCategory
+    : availableCategories[0] || "";
+
   return (
     <div className="space-y-3">
-      {/* Category tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {availableCategories.map((cat) => (
           <button
@@ -44,7 +55,7 @@ export default function ServiceSelector({ services, selected, onToggle }: Servic
             onClick={() => setActiveCategory(cat)}
             className={cn(
               "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-              activeCategory === cat
+              effectiveCategory === cat
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
             )}
@@ -54,9 +65,8 @@ export default function ServiceSelector({ services, selected, onToggle }: Servic
         ))}
       </div>
 
-      {/* Service list */}
       <div className="space-y-2">
-        {(grouped[activeCategory] || []).map((service) => {
+        {(grouped[effectiveCategory] || []).map((service) => {
           const isSelected = selected.includes(service.serviceId);
           return (
             <button
