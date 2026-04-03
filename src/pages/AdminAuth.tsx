@@ -32,7 +32,7 @@ export default function AdminAuth() {
       toast.error(error.message);
     } else {
       toast.success("Login berhasil");
-      navigate("/admin");
+      // useEffect will handle redirect once roles are loaded
     }
   };
 
