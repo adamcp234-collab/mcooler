@@ -28,10 +28,14 @@ export default function VendorDashboard() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/vendor/auth", { replace: true });
+    if (!loading) {
+      if (!user) {
+        navigate("/vendor/auth", { replace: true });
+      } else if (!isVendor && !mitraId) {
+        navigate("/vendor/onboarding", { replace: true });
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, isVendor, mitraId, loading, navigate]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["vendor-orders", mitraId],
