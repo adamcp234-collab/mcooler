@@ -41,7 +41,22 @@ export default function VendorDashboard() {
     queryKey: ["vendor-orders", mitraId],
     queryFn: () => (mitraId ? fetchOrdersByMitra(mitraId) : Promise.resolve([])),
     enabled: !!mitraId,
+    refetchInterval: 30000, // Poll every 30s as backup
   });
+
+  // Realtime subscription for order updates
+  useEffect(() => {
+    if (!mitraId) return;
+    const channel = supabase
+      .channel('vendor-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ec_order_head', filter: `mitra_id=eq.${mitraId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["vendor-orders", mitraId] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [mitraId, queryClient]);
 
   const { data: services = [] } = useQuery({
     queryKey: ["vendor-services", mitraId],
