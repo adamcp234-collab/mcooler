@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, Camera, Award, Plus, X, CheckCircle } from "lucide-react";
+import MapPicker from "@/components/MapPicker";
+import { Upload, Camera, Award, Plus, X, CheckCircle, MapPin } from "lucide-react";
 
 type PhotoUpload = {
   file: File;
@@ -20,7 +21,7 @@ type PhotoUpload = {
 
 export default function VendorOnboarding() {
   const navigate = useNavigate();
-  const { user, isVendor, loading, mitraId } = useAuth();
+  const { user, isVendor, loading, mitraId, refreshRoles } = useAuth();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,6 +29,7 @@ export default function VendorOnboarding() {
   const [companyName, setCompanyName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [address, setAddress] = useState("");
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Step 2: Photos
   const [photos, setPhotos] = useState<PhotoUpload[]>([]);
@@ -51,6 +53,9 @@ export default function VendorOnboarding() {
             setCompanyName(data.company_name || "");
             setWhatsapp(data.whatsapp_number || "");
             setAddress(data.address_full || "");
+            if (data.latitude && data.longitude) {
+              setLocation({ lat: data.latitude, lng: data.longitude });
+            }
           }
         });
     }
@@ -68,7 +73,6 @@ export default function VendorOnboarding() {
         return;
       }
       const preview = URL.createObjectURL(file);
-      // Replace existing photo of same type if it's identity/equipment (single required)
       if (type === "identity" || type === "equipment") {
         setPhotos(prev => [...prev.filter(p => p.type !== type), { file, preview, type, label }]);
       } else {
@@ -90,19 +94,24 @@ export default function VendorOnboarding() {
       toast.error("Nama usaha dan WhatsApp wajib diisi");
       return;
     }
+    if (!location) {
+      toast.error("Lokasi workshop wajib ditentukan");
+      return;
+    }
     if (!user) return;
     setSubmitting(true);
 
     const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
     if (mitraId) {
-      // Update existing
       const { error } = await supabase
         .from("ms_mitra_det")
         .update({
           company_name: companyName,
           whatsapp_number: whatsapp,
           address_full: address || null,
+          latitude: location.lat,
+          longitude: location.lng,
           slug: slug + "-" + user.id.substring(0, 4),
         })
         .eq("mitra_id", mitraId);
@@ -112,7 +121,7 @@ export default function VendorOnboarding() {
         return;
       }
     } else {
-      // Create new mitra + role
+      // Create vendor role first
       await supabase.from("user_roles").insert({ user_id: user.id, role: "vendor" as any });
       const { error } = await supabase.from("ms_mitra_det").insert({
         mitra_id: user.id,
@@ -121,6 +130,8 @@ export default function VendorOnboarding() {
         whatsapp_number: whatsapp,
         email: user.email || "",
         address_full: address || null,
+        latitude: location.lat,
+        longitude: location.lng,
         is_active: false,
         registration_status: "pending_verification" as any,
       });
@@ -129,6 +140,8 @@ export default function VendorOnboarding() {
         setSubmitting(false);
         return;
       }
+      // Refresh auth context so mitraId is set
+      await refreshRoles();
     }
 
     setSubmitting(false);
@@ -211,6 +224,20 @@ export default function VendorOnboarding() {
                 <Label>Alamat Lengkap</Label>
                 <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Alamat lengkap usaha Anda" />
               </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> Lokasi Workshop *
+                </Label>
+                <p className="text-xs text-muted-foreground">Geser peta atau gunakan GPS untuk menentukan lokasi workshop Anda</p>
+                <MapPicker
+                  value={location || undefined}
+                  onChange={setLocation}
+                  height="250px"
+                />
+                {location && (
+                  <p className="text-xs text-muted-foreground">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+                )}
+              </div>
               <Button className="w-full mcooler-gradient" onClick={handleSaveProfile} disabled={submitting}>
                 {submitting ? "Menyimpan..." : "Selanjutnya"}
               </Button>
@@ -225,11 +252,8 @@ export default function VendorOnboarding() {
               <CardDescription>Upload foto wajib dan dokumen pendukung</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Required Photos */}
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground">Foto Wajib</p>
-
-                {/* Identity Photo */}
                 <div
                   className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => handleFileSelect("identity", "Foto Identitas (KTP/SIM)")}
@@ -248,8 +272,6 @@ export default function VendorOnboarding() {
                     </div>
                   )}
                 </div>
-
-                {/* Equipment Photo */}
                 <div
                   className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => handleFileSelect("equipment", "Foto Diri + Peralatan")}
@@ -270,7 +292,6 @@ export default function VendorOnboarding() {
                 </div>
               </div>
 
-              {/* Optional Photos */}
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground">Foto Tambahan (Opsional)</p>
                 <div className="grid grid-cols-3 gap-2">
