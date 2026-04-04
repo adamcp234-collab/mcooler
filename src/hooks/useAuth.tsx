@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -11,6 +11,7 @@ interface AuthContextType {
   mitraId: string | null;
   registrationStatus: string | null;
   signOut: () => Promise<void>;
+  refreshRoles: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   mitraId: null,
   registrationStatus: null,
   signOut: async () => {},
+  refreshRoles: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mitraId, setMitraId] = useState<string | null>(null);
   const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
 
-  const checkRoles = async (userId: string) => {
+  const checkRoles = useCallback(async (userId: string) => {
     const [adminRes, vendorRes] = await Promise.all([
       supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
       supabase.rpc("has_role", { _user_id: userId, _role: "vendor" }),
@@ -41,16 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(adminRes.data === true);
     setIsVendor(vendorRes.data === true);
 
-    if (vendorRes.data === true) {
-      const { data: mitra } = await supabase
-        .from("ms_mitra_det")
-        .select("mitra_id, registration_status")
-        .eq("mitra_id", userId)
-        .maybeSingle();
-      setMitraId(mitra?.mitra_id || null);
-      setRegistrationStatus(mitra?.registration_status || null);
+    // Always check for mitra record (vendor may have just been created)
+    const { data: mitra } = await supabase
+      .from("ms_mitra_det")
+      .select("mitra_id, registration_status")
+      .eq("mitra_id", userId)
+      .maybeSingle();
+    setMitraId(mitra?.mitra_id || null);
+    setRegistrationStatus(mitra?.registration_status || null);
+  }, []);
+
+  const refreshRoles = useCallback(async () => {
+    if (user) {
+      await checkRoles(user.id);
     }
-  };
+  }, [user, checkRoles]);
 
   useEffect(() => {
     let mounted = true;
@@ -61,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Non-blocking role check, then set loading false
           checkRoles(session.user.id).finally(() => {
             if (mounted) setLoading(false);
           });
@@ -92,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [checkRoles]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -105,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isVendor, mitraId, registrationStatus, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isVendor, mitraId, registrationStatus, signOut, refreshRoles }}>
       {children}
     </AuthContext.Provider>
   );
