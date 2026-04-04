@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -10,11 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
 
 export default function VendorAuth() {
   const navigate = useNavigate();
-  const { user, isVendor, loading } = useAuth();
+  const { user, isVendor, loading, mitraId, registrationStatus } = useAuth();
   const [tab, setTab] = useState<string>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,13 +21,19 @@ export default function VendorAuth() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && isVendor) {
-      navigate("/vendor", { replace: true });
-    } else if (!loading && user && !isVendor) {
-      // User is logged in but not a vendor yet — send to onboarding
-      navigate("/vendor/onboarding", { replace: true });
+    if (!loading && user) {
+      if (isVendor && mitraId) {
+        if (registrationStatus === "verified") {
+          navigate("/vendor", { replace: true });
+        } else {
+          navigate("/vendor", { replace: true }); // Dashboard shows pending/rejected state
+        }
+      } else {
+        // Logged in but no vendor record yet → onboarding
+        navigate("/vendor/onboarding", { replace: true });
+      }
     }
-  }, [user, isVendor, loading, navigate]);
+  }, [user, isVendor, mitraId, loading, registrationStatus, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +44,6 @@ export default function VendorAuth() {
       toast.error(error.message);
     } else {
       toast.success("Login berhasil");
-      // useEffect will handle redirect once roles are loaded
     }
   };
 
@@ -66,8 +70,7 @@ export default function VendorAuth() {
     if (data.user && !data.session) {
       toast.success("Registrasi berhasil! Cek email untuk verifikasi.");
     } else if (data.session) {
-      // Auto confirmed - create vendor role and mitra record
-      await setupVendor(data.user!.id, name, email);
+      // Auto confirmed - redirect to onboarding (onboarding will create mitra record)
       toast.success("Registrasi berhasil! Silakan lengkapi data Anda.");
       navigate("/vendor/onboarding");
     }
@@ -81,20 +84,8 @@ export default function VendorAuth() {
     setSubmitting(false);
     if (result.error) {
       toast.error(result.error.message || "Google login gagal");
-      return;
     }
-    if (result.redirected) return;
-    // Session set - check if vendor role exists, if not create
-    const { data: { user: u } } = await supabase.auth.getUser();
-    if (u) {
-      const { data: role } = await supabase.rpc("has_role", { _user_id: u.id, _role: "vendor" });
-      if (!role) {
-        await setupVendor(u.id, u.user_metadata?.full_name || u.email || "", u.email || "");
-        navigate("/vendor/onboarding");
-      } else {
-        navigate("/vendor");
-      }
-    }
+    // After redirect back, useEffect will handle navigation
   };
 
   return (
@@ -172,20 +163,4 @@ export default function VendorAuth() {
       </div>
     </div>
   );
-}
-
-async function setupVendor(userId: string, name: string, email: string) {
-  // Create vendor role
-  await supabase.from("user_roles").insert({ user_id: userId, role: "vendor" as any });
-  // Create mitra record (inactive, pending verification)
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  await supabase.from("ms_mitra_det").insert({
-    mitra_id: userId,
-    company_name: name,
-    slug: slug + "-" + Math.random().toString(36).substring(2, 6),
-    whatsapp_number: "",
-    email: email,
-    is_active: false,
-    registration_status: "pending_verification" as any,
-  });
 }
