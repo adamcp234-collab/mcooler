@@ -144,7 +144,7 @@ export default function VendorDashboard() {
 
   const deleteServiceMutation = useMutation({
     mutationFn: async (serviceId: string) => {
-      const { error } = await supabase.from("ms_services").delete().eq("id", serviceId);
+      const { error } = await supabase.from("ms_service_det").delete().eq("id", serviceId);
       if (error) throw error;
     },
     onSuccess: () => {
