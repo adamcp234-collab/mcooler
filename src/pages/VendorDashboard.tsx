@@ -119,9 +119,14 @@ export default function VendorDashboard() {
   const saveServiceMutation = useMutation({
     mutationFn: async () => {
       if (!mitraId) throw new Error("No mitra");
-      const payload = {
+      const updatePayload = {
+        price: parseInt(servicePrice) || 0,
+        description: serviceDesc || null,
+        is_active: true,
+      };
+      const insertPayload = {
         mitra_id: mitraId,
-        service_name: serviceName,
+        master_service_id: serviceName, // serviceName here holds the master_service_id
         price: parseInt(servicePrice) || 0,
         description: serviceDesc || null,
         is_active: true,
