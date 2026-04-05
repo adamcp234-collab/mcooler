@@ -22,18 +22,15 @@ export default function VendorAuth() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (isVendor && mitraId) {
-        if (registrationStatus === "verified") {
-          navigate("/vendor", { replace: true });
-        } else {
-          navigate("/vendor", { replace: true }); // Dashboard shows pending/rejected state
-        }
+      if (isVendor || mitraId) {
+        // Vendor already has a record → always go to dashboard
+        navigate("/vendor", { replace: true });
       } else {
-        // Logged in but no vendor record yet → onboarding
+        // No vendor role and no mitra record → first-time onboarding
         navigate("/vendor/onboarding", { replace: true });
       }
     }
-  }, [user, isVendor, mitraId, loading, registrationStatus, navigate]);
+  }, [user, isVendor, mitraId, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

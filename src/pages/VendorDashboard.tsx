@@ -50,6 +50,7 @@ export default function VendorDashboard() {
       if (!user) {
         navigate("/vendor/auth", { replace: true });
       } else if (!isVendor && !mitraId) {
+        // Only redirect to onboarding if no vendor role AND no mitra record
         navigate("/vendor/onboarding", { replace: true });
       }
     }
