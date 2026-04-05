@@ -76,6 +76,24 @@ export type Database = {
           },
         ]
       }
+      master_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_name?: string
+        }
+        Relationships: []
+      }
       mitra_doc: {
         Row: {
           created_at: string | null
@@ -161,44 +179,6 @@ export type Database = {
           whatsapp_number?: string
         }
         Relationships: []
-      }
-      ms_services: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          mitra_id: string
-          price: number
-          service_name: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          mitra_id: string
-          price?: number
-          service_name: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          mitra_id?: string
-          price?: number
-          service_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ms_services_mitra_id_fkey"
-            columns: ["mitra_id"]
-            isOneToOne: false
-            referencedRelation: "ms_mitra_det"
-            referencedColumns: ["mitra_id"]
-          },
-        ]
       }
       order_completion_photo: {
         Row: {
