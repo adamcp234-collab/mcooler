@@ -659,25 +659,27 @@ export default function VendorDashboard() {
                       <Ban className="w-4 h-4 mr-1" /> Batalkan
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
-                      window.open(`https://wa.me/${encodeURIComponent(wa)}`, "_blank");
-                    }}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
-                  </Button>
-                  {selectedOrder.cust_latitude && selectedOrder.cust_longitude && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => window.open(`https://www.google.com/maps?q=${selectedOrder.cust_latitude},${selectedOrder.cust_longitude}`, "_blank")}
-                    >
-                      <MapPin className="w-4 h-4 mr-1" /> Buka Google Maps
-                    </Button>
-                  )}
+                   {selectedOrder.status !== "pending" && (
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => {
+                         const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
+                         window.open(`https://wa.me/${encodeURIComponent(wa)}`, "_blank");
+                       }}
+                     >
+                       <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                     </Button>
+                   )}
+                   {selectedOrder.cust_latitude && selectedOrder.cust_longitude && (
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => window.open(`https://www.google.com/maps?q=${selectedOrder.cust_latitude},${selectedOrder.cust_longitude}`, "_blank")}
+                     >
+                       <MapPin className="w-4 h-4 mr-1" /> Buka Google Maps
+                     </Button>
+                   )}
                 </div>
               </div>
             </>
