@@ -188,7 +188,8 @@ export default function VendorDashboard() {
   // Profile mutation
   const saveProfileMutation = useMutation({
     mutationFn: async () => {
-      if (!mitraId || !profileData) throw new Error("No data");
+      if (!user || !profileData) throw new Error("No data");
+      const userId = user.id;
       const { error } = await supabase.from("ms_mitra_det").update({
         company_name: profileData.company_name,
         whatsapp_number: profileData.whatsapp_number,
@@ -196,13 +197,37 @@ export default function VendorDashboard() {
         email: profileData.email || null,
         latitude: profileLocation?.lat || null,
         longitude: profileLocation?.lng || null,
-      }).eq("mitra_id", mitraId);
+      }).eq("mitra_id", userId);
       if (error) throw error;
+
+      // Upload new photos
+      for (const photo of profilePhotos) {
+        const ext = photo.file.name.split(".").pop();
+        const path = `${userId}/${photo.type}-${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("vendor-photos").upload(path, photo.file);
+        if (uploadErr) throw new Error(`Gagal upload ${photo.label}: ${uploadErr.message}`);
+        const { data: urlData } = supabase.storage.from("vendor-photos").getPublicUrl(path);
+        // Remove old photo of same required type
+        if (photo.type === "identity" || photo.type === "equipment") {
+          const oldPhoto = existingPhotos.find(p => p.photo_type === photo.type);
+          if (oldPhoto) {
+            await supabase.from("vendor_photos").delete().eq("id", oldPhoto.id);
+          }
+        }
+        await supabase.from("vendor_photos").insert({
+          mitra_id: userId,
+          photo_type: photo.type,
+          file_name: photo.file.name,
+          file_path: urlData.publicUrl,
+          is_required: photo.type === "identity" || photo.type === "equipment",
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-profile"] });
       toast.success("Profil diperbarui");
       setShowProfileDialog(false);
+      setProfilePhotos([]);
     },
     onError: (err: any) => toast.error(err.message),
   });
