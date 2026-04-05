@@ -52,12 +52,9 @@ export default function VendorDashboard() {
     if (!loading) {
       if (!user) {
         navigate("/vendor/auth", { replace: true });
-      } else if (!isVendor && !mitraId) {
-        // Only redirect to onboarding if no vendor role AND no mitra record
-        navigate("/vendor/onboarding", { replace: true });
       }
     }
-  }, [user, isVendor, mitraId, loading, navigate]);
+  }, [user, loading, navigate]);
 
   // Fetch orders
   const { data: orders = [] } = useQuery({
