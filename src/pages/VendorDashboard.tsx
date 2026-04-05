@@ -406,7 +406,7 @@ export default function VendorDashboard() {
                       {STATUS_LABELS[order.status as OrderStatus]}
                     </Badge>
                   </div>
-                  <p className="text-sm text-foreground">{order.cust_name}</p>
+                  <p className="text-sm text-foreground">{order.status === "pending" ? "Pelanggan baru" : order.cust_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {order.booking_date} • {order.booking_time} • {(order.selected_services as any[])?.length || 0} layanan
                   </p>
