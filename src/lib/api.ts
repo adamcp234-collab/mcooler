@@ -131,10 +131,14 @@ export async function fetchOrdersByMitra(mitraId: string) {
   return data;
 }
 
-export async function updateOrderStatus(orderId: string, newStatus: string) {
+export async function updateOrderStatus(orderId: string, newStatus: string, cancelReason?: string) {
+  const updateData: any = { status: newStatus };
+  if (newStatus === "cancelled" && cancelReason) {
+    updateData.cancel_reason = cancelReason;
+  }
   const { data, error } = await supabase
     .from("ec_order_head")
-    .update({ status: newStatus as any })
+    .update(updateData)
     .eq("order_id", orderId)
     .select()
     .single();
