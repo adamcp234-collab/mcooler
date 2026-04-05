@@ -22,15 +22,10 @@ export default function VendorAuth() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (isVendor || mitraId) {
-        // Vendor already has a record → always go to dashboard
-        navigate("/vendor", { replace: true });
-      } else {
-        // No vendor role and no mitra record → first-time onboarding
-        navigate("/vendor/onboarding", { replace: true });
-      }
+      // Always go to dashboard — profile completion is done via edit profile
+      navigate("/vendor", { replace: true });
     }
-  }, [user, isVendor, mitraId, loading, navigate]);
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
