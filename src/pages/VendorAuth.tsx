@@ -54,17 +54,37 @@ export default function VendorAuth() {
         emailRedirectTo: window.location.origin + "/vendor/auth",
       },
     });
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast.error(error.message);
       return;
     }
     if (data.user && !data.session) {
+      setSubmitting(false);
       toast.success("Registrasi berhasil! Cek email untuk verifikasi.");
-    } else if (data.session) {
-      toast.success("Registrasi berhasil!");
-      // useEffect will handle redirect
+      return;
     }
+    // If session exists (auto-confirm or immediate), create mitra record + role
+    if (data.user && data.session) {
+      try {
+        const slug = name.trim().toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+        // Insert vendor role
+        await supabase.from("user_roles").insert({ user_id: data.user.id, role: "vendor" as any });
+        // Insert minimal mitra record
+        await supabase.from("ms_mitra_det").insert({
+          mitra_id: data.user.id,
+          company_name: name.trim(),
+          slug,
+          whatsapp_number: "-",
+          email,
+        });
+      } catch (err) {
+        console.error("Auto-setup error:", err);
+      }
+      toast.success("Registrasi berhasil!");
+      // useEffect will handle redirect after refreshRoles
+    }
+    setSubmitting(false);
   };
 
   const handleGoogleLogin = async () => {
