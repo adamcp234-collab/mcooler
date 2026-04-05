@@ -218,7 +218,7 @@ export default function VendorDashboard() {
     setServiceDesc(existing?.description || "");
   };
 
-  const openProfileDialog = () => {
+  const openProfileDialog = async () => {
     if (mitraProfile) {
       setProfileData({ ...mitraProfile });
       setProfileLocation(
@@ -227,7 +227,6 @@ export default function VendorDashboard() {
           : null
       );
     } else {
-      // New vendor with no profile data yet — initialize with defaults
       setProfileData({
         company_name: user?.user_metadata?.full_name || "",
         whatsapp_number: "",
@@ -236,7 +235,47 @@ export default function VendorDashboard() {
       });
       setProfileLocation(null);
     }
+    setProfilePhotos([]);
+    // Load existing photos
+    if (user) {
+      const { data } = await supabase.from("vendor_photos").select("*").eq("mitra_id", user.id);
+      setExistingPhotos(data || []);
+    }
     setShowProfileDialog(true);
+  };
+
+  const handleProfileFileSelect = (type: string, label: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 5MB");
+        return;
+      }
+      const preview = URL.createObjectURL(file);
+      if (type === "identity" || type === "equipment") {
+        setProfilePhotos(prev => [...prev.filter(p => p.type !== type), { file, preview, type, label }]);
+      } else {
+        setProfilePhotos(prev => [...prev, { file, preview, type, label }]);
+      }
+    };
+    input.click();
+  };
+
+  const removeProfilePhoto = (index: number) => {
+    setProfilePhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const removeExistingPhoto = async (photoId: string) => {
+    await supabase.from("vendor_photos").delete().eq("id", photoId);
+    setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
+    toast.success("Foto dihapus");
   };
 
   const stats = {
