@@ -35,10 +35,8 @@ export default function VendorDashboard() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>("all");
 
-  // Service CRUD state
-  const [showServiceDialog, setShowServiceDialog] = useState(false);
-  const [editingService, setEditingService] = useState<any>(null);
-  const [serviceName, setServiceName] = useState("");
+  // Service edit state
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [servicePrice, setServicePrice] = useState("");
   const [serviceDesc, setServiceDesc] = useState("");
 
