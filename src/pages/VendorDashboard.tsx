@@ -223,6 +223,15 @@ export default function VendorDashboard() {
           ? { lat: mitraProfile.latitude, lng: mitraProfile.longitude }
           : null
       );
+    } else {
+      // New vendor with no profile data yet — initialize with defaults
+      setProfileData({
+        company_name: user?.user_metadata?.full_name || "",
+        whatsapp_number: "",
+        email: user?.email || "",
+        address_full: "",
+      });
+      setProfileLocation(null);
     }
     setShowProfileDialog(true);
   };
@@ -282,22 +291,7 @@ export default function VendorDashboard() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
   if (!user) return null;
 
-  if (registrationStatus === "pending_verification") {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container max-w-lg px-4 py-20 text-center">
-          <Clock className="w-16 h-16 mx-auto text-warning mb-4" />
-          <h1 className="text-xl font-bold text-foreground mb-2">Menunggu Verifikasi</h1>
-          <p className="text-muted-foreground mb-4">
-            Akun Anda sedang dalam proses verifikasi oleh admin.
-          </p>
-          <Button variant="outline" onClick={() => navigate("/vendor/onboarding")}>Lengkapi Data</Button>
-          <Button variant="ghost" className="ml-2" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Logout</Button>
-        </div>
-      </div>
-    );
-  }
+  const isPendingVerification = registrationStatus === "pending_verification";
 
   if (registrationStatus === "rejected") {
     return (
@@ -317,6 +311,12 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-background">
       <Header mitraName={mitraProfile?.company_name || "Dashboard Vendor"} />
       <div className="container max-w-2xl px-4 py-6 space-y-6">
+        {isPendingVerification && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center gap-2 text-sm">
+            <Clock className="w-5 h-5 text-warning shrink-0" />
+            <span className="text-foreground">Akun Anda sedang menunggu verifikasi admin. Silakan lengkapi profil dan layanan terlebih dahulu.</span>
+          </div>
+        )}
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm text-muted-foreground">{user.email}</p>
