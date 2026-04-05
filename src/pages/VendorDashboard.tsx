@@ -48,6 +48,8 @@ export default function VendorDashboard() {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [profileLocation, setProfileLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [profilePhotos, setProfilePhotos] = useState<{ file: File; preview: string; type: string; label: string }[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading) {
