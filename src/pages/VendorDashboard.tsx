@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
   Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut, Pencil, Settings, Save,
-  Calendar, Phone, Mail, MapPinIcon, MessageCircle, Navigation, X, Play, Ban, Eye
+  Calendar, Phone, Mail, MapPinIcon, MessageCircle, Navigation, X, Play, Ban, Eye,
+  Camera, Upload, Award, Plus
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -47,6 +48,8 @@ export default function VendorDashboard() {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [profileLocation, setProfileLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [profilePhotos, setProfilePhotos] = useState<{ file: File; preview: string; type: string; label: string }[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading) {
@@ -185,7 +188,8 @@ export default function VendorDashboard() {
   // Profile mutation
   const saveProfileMutation = useMutation({
     mutationFn: async () => {
-      if (!mitraId || !profileData) throw new Error("No data");
+      if (!user || !profileData) throw new Error("No data");
+      const userId = user.id;
       const { error } = await supabase.from("ms_mitra_det").update({
         company_name: profileData.company_name,
         whatsapp_number: profileData.whatsapp_number,
@@ -193,13 +197,37 @@ export default function VendorDashboard() {
         email: profileData.email || null,
         latitude: profileLocation?.lat || null,
         longitude: profileLocation?.lng || null,
-      }).eq("mitra_id", mitraId);
+      }).eq("mitra_id", userId);
       if (error) throw error;
+
+      // Upload new photos
+      for (const photo of profilePhotos) {
+        const ext = photo.file.name.split(".").pop();
+        const path = `${userId}/${photo.type}-${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("vendor-photos").upload(path, photo.file);
+        if (uploadErr) throw new Error(`Gagal upload ${photo.label}: ${uploadErr.message}`);
+        const { data: urlData } = supabase.storage.from("vendor-photos").getPublicUrl(path);
+        // Remove old photo of same required type
+        if (photo.type === "identity" || photo.type === "equipment") {
+          const oldPhoto = existingPhotos.find(p => p.photo_type === photo.type);
+          if (oldPhoto) {
+            await supabase.from("vendor_photos").delete().eq("id", oldPhoto.id);
+          }
+        }
+        await supabase.from("vendor_photos").insert({
+          mitra_id: userId,
+          photo_type: photo.type,
+          file_name: photo.file.name,
+          file_path: urlData.publicUrl,
+          is_required: photo.type === "identity" || photo.type === "equipment",
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-profile"] });
       toast.success("Profil diperbarui");
       setShowProfileDialog(false);
+      setProfilePhotos([]);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -215,7 +243,7 @@ export default function VendorDashboard() {
     setServiceDesc(existing?.description || "");
   };
 
-  const openProfileDialog = () => {
+  const openProfileDialog = async () => {
     if (mitraProfile) {
       setProfileData({ ...mitraProfile });
       setProfileLocation(
@@ -224,7 +252,6 @@ export default function VendorDashboard() {
           : null
       );
     } else {
-      // New vendor with no profile data yet — initialize with defaults
       setProfileData({
         company_name: user?.user_metadata?.full_name || "",
         whatsapp_number: "",
@@ -233,7 +260,47 @@ export default function VendorDashboard() {
       });
       setProfileLocation(null);
     }
+    setProfilePhotos([]);
+    // Load existing photos
+    if (user) {
+      const { data } = await supabase.from("vendor_photos").select("*").eq("mitra_id", user.id);
+      setExistingPhotos(data || []);
+    }
     setShowProfileDialog(true);
+  };
+
+  const handleProfileFileSelect = (type: string, label: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 5MB");
+        return;
+      }
+      const preview = URL.createObjectURL(file);
+      if (type === "identity" || type === "equipment") {
+        setProfilePhotos(prev => [...prev.filter(p => p.type !== type), { file, preview, type, label }]);
+      } else {
+        setProfilePhotos(prev => [...prev, { file, preview, type, label }]);
+      }
+    };
+    input.click();
+  };
+
+  const removeProfilePhoto = (index: number) => {
+    setProfilePhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const removeExistingPhoto = async (photoId: string) => {
+    await supabase.from("vendor_photos").delete().eq("id", photoId);
+    setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
+    toast.success("Foto dihapus");
   };
 
   const stats = {
@@ -754,6 +821,100 @@ export default function VendorDashboard() {
                 <MapPicker value={profileLocation || undefined} onChange={setProfileLocation} height="200px" />
                 {profileLocation && <p className="text-xs text-muted-foreground">📍 {profileLocation.lat.toFixed(5)}, {profileLocation.lng.toFixed(5)}</p>}
               </div>
+
+              {/* Photo uploads for verification */}
+              <hr className="border-border" />
+              <p className="text-sm font-semibold text-foreground">Foto Verifikasi</p>
+
+              {/* Identity photo */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Foto Identitas (KTP/SIM) *</Label>
+                {(() => {
+                  const newPhoto = profilePhotos.find(p => p.type === "identity");
+                  const existingPhoto = existingPhotos.find(p => p.photo_type === "identity");
+                  if (newPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={newPhoto.preview} alt="KTP" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(newPhoto))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                      </div>
+                    );
+                  }
+                  if (existingPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={existingPhoto.file_path} alt="KTP" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeExistingPhoto(existingPhoto.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                        <span className="absolute bottom-1 left-1 bg-accent/80 text-accent-foreground text-[10px] px-1.5 py-0.5 rounded">Sudah diupload</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleProfileFileSelect("identity", "Foto KTP/SIM")}>
+                      <Camera className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-xs text-muted-foreground">Klik untuk upload foto identitas</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Equipment photo */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Upload className="w-3.5 h-3.5" /> Foto Diri + Peralatan Lengkap *</Label>
+                {(() => {
+                  const newPhoto = profilePhotos.find(p => p.type === "equipment");
+                  const existingPhoto = existingPhotos.find(p => p.photo_type === "equipment");
+                  if (newPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={newPhoto.preview} alt="Peralatan" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(newPhoto))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                      </div>
+                    );
+                  }
+                  if (existingPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={existingPhoto.file_path} alt="Peralatan" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeExistingPhoto(existingPhoto.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                        <span className="absolute bottom-1 left-1 bg-accent/80 text-accent-foreground text-[10px] px-1.5 py-0.5 rounded">Sudah diupload</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleProfileFileSelect("equipment", "Foto Diri + Peralatan")}>
+                      <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-xs text-muted-foreground">Klik untuk upload foto diri bersama peralatan</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Optional photos */}
+              <div className="space-y-2">
+                <Label>Foto Tambahan (Opsional)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {existingPhotos.filter(p => p.photo_type !== "identity" && p.photo_type !== "equipment").map(photo => (
+                    <div key={photo.id} className="relative">
+                      <img src={photo.file_path} alt={photo.photo_type} className="w-full h-20 object-cover rounded border border-border" />
+                      <button onClick={() => removeExistingPhoto(photo.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                  {profilePhotos.filter(p => p.type !== "identity" && p.type !== "equipment").map((photo, i) => (
+                    <div key={`new-${i}`} className="relative">
+                      <img src={photo.preview} alt={photo.label} className="w-full h-20 object-cover rounded border border-border" />
+                      <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(photo))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                  <button className="h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50" onClick={() => handleProfileFileSelect("certificate", "Sertifikat")}>
+                    <Award className="w-4 h-4 mb-0.5" /><span className="text-[10px]">Sertifikat</span>
+                  </button>
+                  <button className="h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50" onClick={() => handleProfileFileSelect("other", "Foto Lainnya")}>
+                    <Plus className="w-4 h-4 mb-0.5" /><span className="text-[10px]">Lainnya</span>
+                  </button>
+                </div>
+              </div>
+
               <Button
                 className="w-full mcooler-gradient"
                 onClick={() => saveProfileMutation.mutate()}
