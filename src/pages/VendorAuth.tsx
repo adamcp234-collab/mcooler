@@ -56,7 +56,7 @@ export default function VendorAuth() {
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: window.location.origin + "/vendor/onboarding",
+        emailRedirectTo: window.location.origin + "/vendor/auth",
       },
     });
     setSubmitting(false);
