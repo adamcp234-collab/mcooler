@@ -76,7 +76,7 @@ export default function VendorAuth() {
   const handleGoogleLogin = async () => {
     setSubmitting(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/vendor/onboarding",
+      redirect_uri: window.location.origin + "/vendor/auth",
     });
     setSubmitting(false);
     if (result.error) {
