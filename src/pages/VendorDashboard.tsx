@@ -156,7 +156,7 @@ export default function VendorDashboard() {
 
   const toggleServiceActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("ms_services").update({ is_active: active }).eq("id", id);
+      const { error } = await supabase.from("ms_service_det").update({ is_active: active }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

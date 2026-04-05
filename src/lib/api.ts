@@ -32,23 +32,37 @@ export async function fetchMitraBySlug(slug: string) {
 
 export async function fetchMitraServices(mitraId: string) {
   const { data, error } = await supabase
-    .from("ms_services")
-    .select("*")
+    .from("ms_service_det")
+    .select("*, master_services(service_name)")
     .eq("mitra_id", mitraId)
-    .eq("is_active", true)
-    .order("service_name");
+    .eq("is_active", true);
   if (error) throw error;
-  return data;
+  return (data || []).map((d: any) => ({
+    id: d.id,
+    service_name: d.master_services?.service_name ?? "",
+    price: d.price ?? 0,
+    is_active: d.is_active,
+    description: d.description || "",
+    mitra_id: d.mitra_id,
+    master_service_id: d.master_service_id,
+  }));
 }
 
 export async function fetchAllActiveServices() {
   const { data, error } = await supabase
-    .from("ms_services")
-    .select("*, ms_mitra_det!inner(is_active)")
-    .eq("is_active", true)
-    .order("service_name");
+    .from("ms_service_det")
+    .select("*, master_services(service_name)")
+    .eq("is_active", true);
   if (error) throw error;
-  return data;
+  return (data || []).map((d: any) => ({
+    id: d.id,
+    service_name: d.master_services?.service_name ?? "",
+    price: d.price ?? 0,
+    is_active: d.is_active,
+    description: d.description || "",
+    mitra_id: d.mitra_id,
+    master_service_id: d.master_service_id,
+  }));
 }
 
 // ============================================
