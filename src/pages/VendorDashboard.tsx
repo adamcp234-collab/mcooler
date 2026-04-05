@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
   Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut, Pencil, Settings, Save,
-  Calendar, Phone, Mail, MapPinIcon, MessageCircle, Navigation, X, Play, Ban, Eye
+  Calendar, Phone, Mail, MapPinIcon, MessageCircle, Navigation, X, Play, Ban, Eye,
+  Camera, Upload, Award, Plus
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
