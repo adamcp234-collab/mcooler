@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           booking_date: string
           booking_time: string
+          cancel_reason: string | null
           completion_notes: string | null
           created_at: string | null
           cust_address_detail: string | null
@@ -35,6 +36,7 @@ export type Database = {
         Insert: {
           booking_date: string
           booking_time: string
+          cancel_reason?: string | null
           completion_notes?: string | null
           created_at?: string | null
           cust_address_detail?: string | null
@@ -52,6 +54,7 @@ export type Database = {
         Update: {
           booking_date?: string
           booking_time?: string
+          cancel_reason?: string | null
           completion_notes?: string | null
           created_at?: string | null
           cust_address_detail?: string | null
@@ -75,6 +78,24 @@ export type Database = {
             referencedColumns: ["mitra_id"]
           },
         ]
+      }
+      master_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_name?: string
+        }
+        Relationships: []
       }
       mitra_doc: {
         Row: {
@@ -162,41 +183,44 @@ export type Database = {
         }
         Relationships: []
       }
-      ms_services: {
+      ms_service_det: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string | null
           id: string
-          is_active: boolean | null
+          is_active: boolean
+          master_service_id: string
           mitra_id: string
-          price: number
-          service_name: string
+          price: number | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
+          master_service_id: string
           mitra_id: string
-          price?: number
-          service_name: string
+          price?: number | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
+          master_service_id?: string
           mitra_id?: string
-          price?: number
-          service_name?: string
+          price?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "ms_services_mitra_id_fkey"
-            columns: ["mitra_id"]
+            foreignKeyName: "ms_service_det_master_service_id_fkey"
+            columns: ["master_service_id"]
             isOneToOne: false
-            referencedRelation: "ms_mitra_det"
-            referencedColumns: ["mitra_id"]
+            referencedRelation: "master_services"
+            referencedColumns: ["id"]
           },
         ]
       }
