@@ -406,7 +406,7 @@ export default function VendorDashboard() {
                       {STATUS_LABELS[order.status as OrderStatus]}
                     </Badge>
                   </div>
-                  <p className="text-sm text-foreground">{order.cust_name}</p>
+                  <p className="text-sm text-foreground">{order.status === "pending" ? "Pelanggan baru" : order.cust_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {order.booking_date} • {order.booking_time} • {(order.selected_services as any[])?.length || 0} layanan
                   </p>
@@ -510,18 +510,29 @@ export default function VendorDashboard() {
                 </div>
               </DialogHeader>
               <div className="px-4 pb-4 space-y-4 text-sm">
-                {/* Data Pelanggan */}
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">Data Pelanggan</p>
-                  <div className="flex items-center gap-2 text-foreground"><span className="w-4 flex-shrink-0">👤</span> {selectedOrder.cust_name}</div>
-                  <div className="flex items-center gap-2 text-foreground"><Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_whatsapp}</div>
-                  {selectedOrder.cust_email && (
-                    <div className="flex items-center gap-2 text-foreground"><Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_email}</div>
-                  )}
-                  <div className="flex items-center gap-2 text-foreground"><MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_address_detail || "-"}</div>
+                {/* Order ID */}
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">Nomor Pesanan</p>
+                  <p className="text-foreground font-mono">{selectedOrder.order_id}</p>
                 </div>
 
                 <hr className="border-border" />
+
+                {/* Data Pelanggan - hidden when pending */}
+                {selectedOrder.status !== "pending" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <p className="font-semibold text-foreground">Data Pelanggan</p>
+                      <div className="flex items-center gap-2 text-foreground"><span className="w-4 flex-shrink-0">👤</span> {selectedOrder.cust_name}</div>
+                      <div className="flex items-center gap-2 text-foreground"><Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_whatsapp}</div>
+                      {selectedOrder.cust_email && (
+                        <div className="flex items-center gap-2 text-foreground"><Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_email}</div>
+                      )}
+                      <div className="flex items-center gap-2 text-foreground"><MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_address_detail || "-"}</div>
+                    </div>
+                    <hr className="border-border" />
+                  </>
+                )}
 
                 {/* Jadwal */}
                 <div className="space-y-1.5">
@@ -648,25 +659,27 @@ export default function VendorDashboard() {
                       <Ban className="w-4 h-4 mr-1" /> Batalkan
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
-                      window.open(`https://wa.me/${encodeURIComponent(wa)}`, "_blank");
-                    }}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
-                  </Button>
-                  {selectedOrder.cust_latitude && selectedOrder.cust_longitude && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => window.open(`https://www.google.com/maps?q=${selectedOrder.cust_latitude},${selectedOrder.cust_longitude}`, "_blank")}
-                    >
-                      <MapPin className="w-4 h-4 mr-1" /> Buka Google Maps
-                    </Button>
-                  )}
+                   {selectedOrder.status !== "pending" && (
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => {
+                         const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
+                         window.open(`https://wa.me/${encodeURIComponent(wa)}`, "_blank");
+                       }}
+                     >
+                       <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                     </Button>
+                   )}
+                   {selectedOrder.cust_latitude && selectedOrder.cust_longitude && (
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => window.open(`https://www.google.com/maps?q=${selectedOrder.cust_latitude},${selectedOrder.cust_longitude}`, "_blank")}
+                     >
+                       <MapPin className="w-4 h-4 mr-1" /> Buka Google Maps
+                     </Button>
+                   )}
                 </div>
               </div>
             </>
