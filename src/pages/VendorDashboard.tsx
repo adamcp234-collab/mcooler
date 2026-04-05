@@ -401,7 +401,7 @@ export default function VendorDashboard() {
                   className="w-full bg-card border border-border rounded-lg p-3 text-left hover:border-primary/30 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-sm text-foreground">{order.order_id}</span>
+                    <span className="font-medium text-sm text-foreground">{order.status === "pending" ? "Pesanan Baru" : order.order_id}</span>
                     <Badge className={cn("text-xs", STATUS_COLORS[order.status as OrderStatus])}>
                       {STATUS_LABELS[order.status as OrderStatus]}
                     </Badge>
