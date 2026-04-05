@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
-  Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut, Plus, Pencil, Trash2, User, Settings, X, Save
+  Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut, Pencil, Settings, Save
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   fetchOrdersByMitra,
@@ -34,10 +35,8 @@ export default function VendorDashboard() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>("all");
 
-  // Service CRUD state
-  const [showServiceDialog, setShowServiceDialog] = useState(false);
-  const [editingService, setEditingService] = useState<any>(null);
-  const [serviceName, setServiceName] = useState("");
+  // Service edit state
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [servicePrice, setServicePrice] = useState("");
   const [serviceDesc, setServiceDesc] = useState("");
 
@@ -76,11 +75,21 @@ export default function VendorDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [mitraId, queryClient]);
 
-  // Fetch services
-  const { data: services = [] } = useQuery({
+  // Fetch vendor's service details
+  const { data: vendorServices = [] } = useQuery({
     queryKey: ["vendor-services", mitraId],
     queryFn: () => (mitraId ? fetchMitraServices(mitraId) : Promise.resolve([])),
     enabled: !!mitraId,
+  });
+
+  // Fetch ALL master services from platform
+  const { data: masterServices = [] } = useQuery({
+    queryKey: ["master-services"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("master_services").select("*").order("service_name");
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Fetch mitra profile
@@ -115,58 +124,59 @@ export default function VendorDashboard() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Service mutations
-  const saveServiceMutation = useMutation({
-    mutationFn: async () => {
+  // Toggle service on/off with upsert
+  const toggleServiceMutation = useMutation({
+    mutationFn: async ({ masterServiceId, activate }: { masterServiceId: string; activate: boolean }) => {
       if (!mitraId) throw new Error("No mitra");
-      const updatePayload = {
-        price: parseInt(servicePrice) || 0,
-        description: serviceDesc || null,
-        is_active: true,
-      };
-      const insertPayload = {
-        mitra_id: mitraId,
-        master_service_id: serviceName, // serviceName here holds the master_service_id
-        price: parseInt(servicePrice) || 0,
-        description: serviceDesc || null,
-        is_active: true,
-      };
-      if (editingService) {
-        const { error } = await supabase.from("ms_service_det").update(updatePayload).eq("id", editingService.id);
+      const existing = vendorServices.find((s) => s.master_service_id === masterServiceId);
+      if (existing) {
+        if (!activate) {
+          const { error } = await supabase.from("ms_service_det").update({ is_active: false }).eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          // Will open edit form, not toggle directly
+        }
+      } else if (!activate) {
+        // Nothing to do
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Save service price/description (upsert)
+  const saveServiceMutation = useMutation({
+    mutationFn: async ({ masterServiceId }: { masterServiceId: string }) => {
+      if (!mitraId) throw new Error("No mitra");
+      const price = parseInt(servicePrice) || 0;
+      const desc = serviceDesc.trim();
+      if (price <= 0) throw new Error("Harga wajib diisi dan harus lebih besar dari 0");
+      if (!desc) throw new Error("Deskripsi wajib diisi");
+
+      const existing = vendorServices.find((s) => s.master_service_id === masterServiceId);
+      if (existing) {
+        const { error } = await supabase.from("ms_service_det").update({
+          price, description: desc, is_active: true,
+        }).eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("ms_service_det").insert(insertPayload);
+        const { error } = await supabase.from("ms_service_det").insert({
+          mitra_id: mitraId, master_service_id: masterServiceId,
+          price, description: desc, is_active: true,
+        });
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-      toast.success(editingService ? "Layanan diperbarui" : "Layanan ditambahkan");
-      closeServiceDialog();
+      toast.success("Layanan disimpan");
+      setEditingServiceId(null);
+      setServicePrice("");
+      setServiceDesc("");
     },
     onError: (err: any) => toast.error(err.message),
-  });
-
-  const deleteServiceMutation = useMutation({
-    mutationFn: async (serviceId: string) => {
-      const { error } = await supabase.from("ms_service_det").delete().eq("id", serviceId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-      toast.success("Layanan dihapus");
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const toggleServiceActive = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("ms_service_det").update({ is_active: active }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-    },
   });
 
   // Profile mutation
@@ -191,27 +201,15 @@ export default function VendorDashboard() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const openServiceDialog = (service?: any) => {
-    if (service) {
-      setEditingService(service);
-      setServiceName(service.service_name);
-      setServicePrice(String(service.price));
-      setServiceDesc(service.description || "");
-    } else {
-      setEditingService(null);
-      setServiceName("");
-      setServicePrice("");
-      setServiceDesc("");
-    }
-    setShowServiceDialog(true);
-  };
+  // Helper: get vendor service detail for a master service
+  const getVendorService = (masterServiceId: string) =>
+    vendorServices.find((s) => s.master_service_id === masterServiceId);
 
-  const closeServiceDialog = () => {
-    setShowServiceDialog(false);
-    setEditingService(null);
-    setServiceName("");
-    setServicePrice("");
-    setServiceDesc("");
+  const startEditService = (masterServiceId: string) => {
+    const existing = getVendorService(masterServiceId);
+    setEditingServiceId(masterServiceId);
+    setServicePrice(existing?.price ? String(existing.price) : "");
+    setServiceDesc(existing?.description || "");
   };
 
   const openProfileDialog = () => {
@@ -321,7 +319,7 @@ export default function VendorDashboard() {
               Order
               {stats.pending > 0 && <span className="ml-1 bg-warning text-warning-foreground text-[10px] rounded-full px-1.5">{stats.pending}</span>}
             </TabsTrigger>
-            <TabsTrigger value="services">Layanan ({services.length})</TabsTrigger>
+            <TabsTrigger value="services">Layanan ({vendorServices.filter(s => s.is_active).length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-3">
@@ -482,81 +480,80 @@ export default function VendorDashboard() {
           </TabsContent>
 
           <TabsContent value="services" className="space-y-3">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">{services.length} layanan terdaftar</p>
-              <Button size="sm" className="mcooler-gradient" onClick={() => openServiceDialog()}>
-                <Plus className="w-4 h-4 mr-1" /> Tambah
-              </Button>
-            </div>
-            {services.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">Belum ada layanan. Tambahkan layanan pertama Anda.</p>
+            <p className="text-sm text-muted-foreground">
+              Aktifkan layanan yang Anda tawarkan. Isi harga & deskripsi untuk setiap layanan aktif.
+            </p>
+            {masterServices.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">Belum ada layanan dari platform.</p>
             )}
-            {services.map((service) => (
-              <div key={service.id} className={cn("bg-card border rounded-lg p-3", service.is_active ? "border-border" : "border-border/50 opacity-60")}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm text-foreground truncate">{service.service_name}</p>
-                      {!service.is_active && <Badge variant="outline" className="text-[10px]">Nonaktif</Badge>}
+            {masterServices.map((ms) => {
+              const vs = getVendorService(ms.id);
+              const isActive = vs?.is_active === true;
+              const isEditing = editingServiceId === ms.id;
+
+              return (
+                <div key={ms.id} className={cn("bg-card border rounded-lg p-3 space-y-2", isActive ? "border-primary/30" : "border-border")}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-foreground">{ms.service_name}</p>
+                      {isActive && vs && (
+                        <div className="mt-0.5">
+                          <p className="text-sm font-semibold text-primary">Rp {vs.price?.toLocaleString("id-ID") || 0}</p>
+                          <p className="text-xs text-muted-foreground">{vs.description || "-"}</p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{service.description || "-"}</p>
-                    <p className="text-sm font-semibold text-primary mt-1">Rp {service.price.toLocaleString("id-ID")}</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {isActive && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditService(ms.id)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Switch
+                        checked={isActive}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            startEditService(ms.id);
+                          } else {
+                            toggleServiceMutation.mutate({ masterServiceId: ms.id, activate: false });
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openServiceDialog(service)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => toggleServiceActive.mutate({ id: service.id, active: !service.is_active })}
-                    >
-                      {service.is_active ? <X className="w-3.5 h-3.5 text-muted-foreground" /> : <CheckCircle className="w-3.5 h-3.5 text-success" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => {
-                      if (confirm("Hapus layanan ini?")) deleteServiceMutation.mutate(service.id);
-                    }}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+
+                  {isEditing && (
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Harga (Rp) *</Label>
+                        <Input type="number" value={servicePrice} onChange={e => setServicePrice(e.target.value)} placeholder="80000" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Deskripsi *</Label>
+                        <Textarea value={serviceDesc} onChange={e => setServiceDesc(e.target.value)} placeholder="Deskripsi layanan..." rows={2} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="mcooler-gradient"
+                          onClick={() => saveServiceMutation.mutate({ masterServiceId: ms.id })}
+                          disabled={saveServiceMutation.isPending}
+                        >
+                          <Save className="w-3.5 h-3.5 mr-1" />
+                          {saveServiceMutation.isPending ? "Menyimpan..." : "Simpan"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingServiceId(null); setServicePrice(""); setServiceDesc(""); }}>
+                          Batal
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Service Dialog */}
-      <Dialog open={showServiceDialog} onOpenChange={(open) => !open && closeServiceDialog()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingService ? "Edit Layanan" : "Tambah Layanan"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nama Layanan *</Label>
-              <Input value={serviceName} onChange={e => setServiceName(e.target.value)} placeholder="Cuci AC 1 PK" />
-            </div>
-            <div className="space-y-2">
-              <Label>Harga (Rp) *</Label>
-              <Input type="number" value={servicePrice} onChange={e => setServicePrice(e.target.value)} placeholder="80000" />
-            </div>
-            <div className="space-y-2">
-              <Label>Deskripsi</Label>
-              <Textarea value={serviceDesc} onChange={e => setServiceDesc(e.target.value)} placeholder="Deskripsi layanan..." rows={2} />
-            </div>
-            <Button
-              className="w-full mcooler-gradient"
-              onClick={() => saveServiceMutation.mutate()}
-              disabled={!serviceName.trim() || !servicePrice || saveServiceMutation.isPending}
-            >
-              <Save className="w-4 h-4 mr-1" />
-              {saveServiceMutation.isPending ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Profile Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={(open) => !open && setShowProfileDialog(false)}>
