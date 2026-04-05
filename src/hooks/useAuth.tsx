@@ -65,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return;
+        // Set loading true immediately to prevent premature redirects
+        // while checkRoles is still running
+        if (session?.user) {
+          setLoading(true);
+        }
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
