@@ -22,18 +22,15 @@ export default function VendorAuth() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (isVendor && mitraId) {
-        if (registrationStatus === "verified") {
-          navigate("/vendor", { replace: true });
-        } else {
-          navigate("/vendor", { replace: true }); // Dashboard shows pending/rejected state
-        }
+      if (isVendor || mitraId) {
+        // Vendor already has a record → always go to dashboard
+        navigate("/vendor", { replace: true });
       } else {
-        // Logged in but no vendor record yet → onboarding
+        // No vendor role and no mitra record → first-time onboarding
         navigate("/vendor/onboarding", { replace: true });
       }
     }
-  }, [user, isVendor, mitraId, loading, registrationStatus, navigate]);
+  }, [user, isVendor, mitraId, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +56,7 @@ export default function VendorAuth() {
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: window.location.origin + "/vendor/onboarding",
+        emailRedirectTo: window.location.origin + "/vendor/auth",
       },
     });
     setSubmitting(false);
@@ -70,16 +67,15 @@ export default function VendorAuth() {
     if (data.user && !data.session) {
       toast.success("Registrasi berhasil! Cek email untuk verifikasi.");
     } else if (data.session) {
-      // Auto confirmed - redirect to onboarding (onboarding will create mitra record)
-      toast.success("Registrasi berhasil! Silakan lengkapi data Anda.");
-      navigate("/vendor/onboarding");
+      toast.success("Registrasi berhasil!");
+      // useEffect will handle redirect
     }
   };
 
   const handleGoogleLogin = async () => {
     setSubmitting(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/vendor/onboarding",
+      redirect_uri: window.location.origin + "/vendor/auth",
     });
     setSubmitting(false);
     if (result.error) {
