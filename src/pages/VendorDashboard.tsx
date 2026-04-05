@@ -75,11 +75,21 @@ export default function VendorDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [mitraId, queryClient]);
 
-  // Fetch services
-  const { data: services = [] } = useQuery({
+  // Fetch vendor's service details
+  const { data: vendorServices = [] } = useQuery({
     queryKey: ["vendor-services", mitraId],
     queryFn: () => (mitraId ? fetchMitraServices(mitraId) : Promise.resolve([])),
     enabled: !!mitraId,
+  });
+
+  // Fetch ALL master services from platform
+  const { data: masterServices = [] } = useQuery({
+    queryKey: ["master-services"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("master_services").select("*").order("service_name");
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Fetch mitra profile
