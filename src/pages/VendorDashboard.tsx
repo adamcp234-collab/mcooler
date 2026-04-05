@@ -119,18 +119,23 @@ export default function VendorDashboard() {
   const saveServiceMutation = useMutation({
     mutationFn: async () => {
       if (!mitraId) throw new Error("No mitra");
-      const payload = {
+      const updatePayload = {
+        price: parseInt(servicePrice) || 0,
+        description: serviceDesc || null,
+        is_active: true,
+      };
+      const insertPayload = {
         mitra_id: mitraId,
-        service_name: serviceName,
+        master_service_id: serviceName, // serviceName here holds the master_service_id
         price: parseInt(servicePrice) || 0,
         description: serviceDesc || null,
         is_active: true,
       };
       if (editingService) {
-        const { error } = await supabase.from("ms_services").update(payload).eq("id", editingService.id);
+        const { error } = await supabase.from("ms_service_det").update(updatePayload).eq("id", editingService.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("ms_services").insert(payload);
+        const { error } = await supabase.from("ms_service_det").insert(insertPayload);
         if (error) throw error;
       }
     },
@@ -144,7 +149,7 @@ export default function VendorDashboard() {
 
   const deleteServiceMutation = useMutation({
     mutationFn: async (serviceId: string) => {
-      const { error } = await supabase.from("ms_services").delete().eq("id", serviceId);
+      const { error } = await supabase.from("ms_service_det").delete().eq("id", serviceId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -156,7 +161,7 @@ export default function VendorDashboard() {
 
   const toggleServiceActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("ms_services").update({ is_active: active }).eq("id", id);
+      const { error } = await supabase.from("ms_service_det").update({ is_active: active }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
