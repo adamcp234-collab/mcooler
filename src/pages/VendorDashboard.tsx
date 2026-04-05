@@ -552,6 +552,8 @@ export default function VendorDashboard() {
               );
             })}
           </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Profile Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={(open) => !open && setShowProfileDialog(false)}>
