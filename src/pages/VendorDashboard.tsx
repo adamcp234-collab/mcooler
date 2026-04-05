@@ -127,10 +127,10 @@ export default function VendorDashboard() {
         is_active: true,
       };
       if (editingService) {
-        const { error } = await supabase.from("ms_services").update(payload).eq("id", editingService.id);
+        const { error } = await supabase.from("ms_service_det").update(payload).eq("id", editingService.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("ms_services").insert(payload);
+        const { error } = await supabase.from("ms_service_det").insert(payload);
         if (error) throw error;
       }
     },
