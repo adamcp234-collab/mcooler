@@ -67,9 +67,8 @@ export default function VendorAuth() {
     if (data.user && !data.session) {
       toast.success("Registrasi berhasil! Cek email untuk verifikasi.");
     } else if (data.session) {
-      // Auto confirmed - redirect to onboarding (onboarding will create mitra record)
-      toast.success("Registrasi berhasil! Silakan lengkapi data Anda.");
-      navigate("/vendor/onboarding");
+      toast.success("Registrasi berhasil!");
+      // useEffect will handle redirect
     }
   };
 
