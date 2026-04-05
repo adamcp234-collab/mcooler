@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CalendarIcon, User, Phone, FileText, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { CalendarIcon, User, Phone, FileText, ArrowRight, ArrowLeft, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -23,7 +23,11 @@ import {
   findNearestMitraFromList,
 } from "@/lib/api";
 
-const STEPS = ["Layanan", "Lokasi", "Jadwal", "Data Diri"];
+// For slug-based booking: Layanan first (mitra already known)
+const STEPS_SLUG = ["Layanan", "Lokasi", "Jadwal", "Data Diri"];
+// For home-based booking: Lokasi first to determine nearest mitra
+const STEPS_HOME = ["Lokasi", "Jadwal", "Layanan", "Data Diri"];
+
 const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
   const h = Math.floor(i / 2) + 8;
   const m = i % 2 === 0 ? "00" : "30";
@@ -33,15 +37,15 @@ const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
 export default function BookingPage() {
   const { mitraSlug } = useParams();
   const navigate = useNavigate();
+  const isSlugMode = !!mitraSlug;
+  const STEPS = isSlugMode ? STEPS_SLUG : STEPS_HOME;
 
-  // Fetch mitra by slug if provided
   const { data: slugMitra, isLoading: loadingSlug } = useQuery({
     queryKey: ["mitra-slug", mitraSlug],
     queryFn: () => fetchMitraBySlug(mitraSlug!),
     enabled: !!mitraSlug,
   });
 
-  // Fetch all active mitras for nearest lookup
   const { data: allMitras } = useQuery({
     queryKey: ["active-mitras"],
     queryFn: fetchActiveMitras,
@@ -59,14 +63,14 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Determine effective mitra
+  // Determine effective mitra — NO fallback to first mitra for home mode
   const effectiveMitraId = useMemo(() => {
     if (slugMitra) return slugMitra.mitra_id;
     if (location && allMitras && allMitras.length > 0) {
       const nearest = findNearestMitraFromList(allMitras, location.lat, location.lng);
       return nearest?.mitra_id || null;
     }
-    return allMitras?.[0]?.mitra_id || null;
+    return null; // Don't fall back to first mitra
   }, [slugMitra, allMitras, location]);
 
   const effectiveMitraName = useMemo(() => {
@@ -77,7 +81,15 @@ export default function BookingPage() {
     return null;
   }, [slugMitra, effectiveMitraId, allMitras]);
 
-  // Fetch services for effective mitra
+  // Reset selected services when mitra changes (location changed → different nearest vendor)
+  const prevMitraIdRef = useMemo(() => effectiveMitraId, [effectiveMitraId]);
+  useEffect(() => {
+    // When not in slug mode and mitra changes, clear service selection
+    if (!isSlugMode) {
+      setSelectedServices([]);
+    }
+  }, [effectiveMitraId, isSlugMode]);
+
   const { data: services = [] } = useQuery({
     queryKey: ["mitra-services", effectiveMitraId],
     queryFn: () => fetchMitraServices(effectiveMitraId!),
@@ -106,15 +118,18 @@ export default function BookingPage() {
     setSelectedServices((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
-  const canNext = () => {
-    switch (step) {
-      case 0: return selectedServices.length > 0;
-      case 1: return location !== null;
-      case 2: return date !== undefined && time !== "";
-      case 3: return name.trim() !== "" && whatsapp.trim().length >= 10;
+  // Map step label to validation
+  const canNextForStep = (stepLabel: string) => {
+    switch (stepLabel) {
+      case "Lokasi": return location !== null;
+      case "Jadwal": return date !== undefined && time !== "";
+      case "Layanan": return selectedServices.length > 0;
+      case "Data Diri": return name.trim() !== "" && whatsapp.trim().length >= 10;
       default: return false;
     }
   };
+
+  const canNext = () => canNextForStep(STEPS[step]);
 
   const handleSubmit = async () => {
     if (!canNext() || !effectiveMitraId || !date) return;
@@ -158,6 +173,8 @@ export default function BookingPage() {
     );
   }
 
+  const currentStepLabel = STEPS[step];
+
   return (
     <div className="min-h-screen bg-background">
       <Header mitraName={effectiveMitraName || undefined} />
@@ -165,44 +182,31 @@ export default function BookingPage() {
         <OrderStepper steps={STEPS} currentStep={step} />
 
         <div className="animate-fade-in">
-          {step === 0 && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Pilih Layanan</h2>
-                <p className="text-sm text-muted-foreground">Pilih satu atau lebih layanan yang Anda butuhkan</p>
-              </div>
-              {selectorServices.length > 0 ? (
-                <ServiceSelector services={selectorServices} selected={selectedServices} onToggle={toggleService} />
-              ) : (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  {effectiveMitraId ? "Memuat layanan..." : "Belum ada mitra tersedia saat ini."}
-                </p>
-              )}
-              {selectedServices.length > 0 && (
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center">
-                  <span className="text-sm font-medium text-foreground">{selectedServices.length} layanan dipilih</span>
-                  <span className="font-bold text-primary">Rp {totalPrice.toLocaleString("id-ID")}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {step === 1 && (
+          {currentStepLabel === "Lokasi" && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-foreground">Tentukan Lokasi</h2>
-                <p className="text-sm text-muted-foreground">Geser peta atau gunakan GPS</p>
+                <p className="text-sm text-muted-foreground">Geser peta atau gunakan GPS untuk menentukan lokasi servis</p>
               </div>
               <MapPicker value={location || undefined} onChange={setLocation} height="280px" />
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Detail Alamat</label>
                 <Textarea placeholder="Contoh: Jl. Sudirman No. 10, RT 03/RW 02" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
               </div>
-              {location && <p className="text-xs text-muted-foreground">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>}
+              {location && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+                  {effectiveMitraName && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Mitra terdekat: <span className="font-medium text-foreground">{effectiveMitraName}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {step === 2 && (
+          {currentStepLabel === "Jadwal" && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-foreground">Pilih Jadwal</h2>
@@ -243,7 +247,32 @@ export default function BookingPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {currentStepLabel === "Layanan" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Pilih Layanan</h2>
+                <p className="text-sm text-muted-foreground">
+                  Pilih satu atau lebih layanan yang Anda butuhkan
+                  {effectiveMitraName && <span className="block text-xs mt-1">🧑‍🔧 Mitra: {effectiveMitraName}</span>}
+                </p>
+              </div>
+              {selectorServices.length > 0 ? (
+                <ServiceSelector services={selectorServices} selected={selectedServices} onToggle={toggleService} />
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  {effectiveMitraId ? "Memuat layanan..." : "Belum ada mitra tersedia di lokasi Anda."}
+                </p>
+              )}
+              {selectedServices.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">{selectedServices.length} layanan dipilih</span>
+                  <span className="font-bold text-primary">Rp {totalPrice.toLocaleString("id-ID")}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {currentStepLabel === "Data Diri" && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-foreground">Data Diri</h2>
