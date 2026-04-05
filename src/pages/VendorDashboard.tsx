@@ -510,18 +510,29 @@ export default function VendorDashboard() {
                 </div>
               </DialogHeader>
               <div className="px-4 pb-4 space-y-4 text-sm">
-                {/* Data Pelanggan */}
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">Data Pelanggan</p>
-                  <div className="flex items-center gap-2 text-foreground"><span className="w-4 flex-shrink-0">👤</span> {selectedOrder.cust_name}</div>
-                  <div className="flex items-center gap-2 text-foreground"><Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_whatsapp}</div>
-                  {selectedOrder.cust_email && (
-                    <div className="flex items-center gap-2 text-foreground"><Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_email}</div>
-                  )}
-                  <div className="flex items-center gap-2 text-foreground"><MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_address_detail || "-"}</div>
+                {/* Order ID */}
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">Nomor Pesanan</p>
+                  <p className="text-foreground font-mono">{selectedOrder.order_id}</p>
                 </div>
 
                 <hr className="border-border" />
+
+                {/* Data Pelanggan - hidden when pending */}
+                {selectedOrder.status !== "pending" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <p className="font-semibold text-foreground">Data Pelanggan</p>
+                      <div className="flex items-center gap-2 text-foreground"><span className="w-4 flex-shrink-0">👤</span> {selectedOrder.cust_name}</div>
+                      <div className="flex items-center gap-2 text-foreground"><Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_whatsapp}</div>
+                      {selectedOrder.cust_email && (
+                        <div className="flex items-center gap-2 text-foreground"><Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_email}</div>
+                      )}
+                      <div className="flex items-center gap-2 text-foreground"><MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_address_detail || "-"}</div>
+                    </div>
+                    <hr className="border-border" />
+                  </>
+                )}
 
                 {/* Jadwal */}
                 <div className="space-y-1.5">
