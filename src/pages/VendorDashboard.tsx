@@ -491,6 +491,228 @@ export default function VendorDashboard() {
         </Tabs>
       </div>
 
+      {/* Order Detail Dialog */}
+      <Dialog open={!!selectedOrderId} onOpenChange={(open) => { if (!open) setSelectedOrderId(null); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+          {selectedOrder && (
+            <>
+              <DialogHeader className="p-4 pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <DialogTitle className="text-lg">Detail Pesanan</DialogTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Dibuat pada {new Date(selectedOrder.created_at!).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                  <Badge className={cn("text-xs", STATUS_COLORS[selectedOrder.status as OrderStatus])}>
+                    {STATUS_LABELS[selectedOrder.status as OrderStatus]}
+                  </Badge>
+                </div>
+              </DialogHeader>
+              <div className="px-4 pb-4 space-y-4 text-sm">
+                {/* Data Pelanggan */}
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Data Pelanggan</p>
+                  <div className="flex items-center gap-2 text-foreground"><span className="w-4 flex-shrink-0">👤</span> {selectedOrder.cust_name}</div>
+                  <div className="flex items-center gap-2 text-foreground"><Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_whatsapp}</div>
+                  {selectedOrder.cust_email && (
+                    <div className="flex items-center gap-2 text-foreground"><Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_email}</div>
+                  )}
+                  <div className="flex items-center gap-2 text-foreground"><MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" /> {selectedOrder.cust_address_detail || "-"}</div>
+                </div>
+
+                <hr className="border-border" />
+
+                {/* Jadwal */}
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Jadwal</p>
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-muted-foreground" /> {selectedOrder.booking_date}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-muted-foreground" /> {selectedOrder.booking_time}</span>
+                  </div>
+                </div>
+
+                <hr className="border-border" />
+
+                {/* Layanan */}
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Layanan</p>
+                  {(selectedOrder.selected_services as any[])?.map((s: any, i: number) => (
+                    <div key={i} className="flex justify-between">
+                      <span className="text-foreground">{s.serviceName}</span>
+                      <span className="font-medium text-foreground">Rp {s.price?.toLocaleString("id-ID")}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-border mt-1 pt-1 flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span className="text-primary">
+                      Rp {(selectedOrder.selected_services as any[])?.reduce((sum: number, s: any) => sum + (s.price || 0), 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Jarak & Estimasi */}
+                {orderDistance && (
+                  <>
+                    <hr className="border-border" />
+                    <div className="space-y-1.5">
+                      <p className="font-semibold text-foreground flex items-center gap-1.5"><Navigation className="w-4 h-4" /> Jarak & Estimasi</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-primary/5 rounded-lg p-2.5 text-center">
+                          <p className="text-xs text-muted-foreground">Jarak</p>
+                          <p className="font-bold text-primary">{orderDistance.km} km</p>
+                        </div>
+                        <div className="bg-primary/5 rounded-lg p-2.5 text-center">
+                          <p className="text-xs text-muted-foreground">Estimasi</p>
+                          <p className="font-bold text-primary">~{orderDistance.minutes} menit</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Catatan */}
+                {selectedOrder.notes && (
+                  <>
+                    <hr className="border-border" />
+                    <div>
+                      <p className="font-semibold text-foreground">Catatan</p>
+                      <p className="text-foreground mt-1">{selectedOrder.notes}</p>
+                    </div>
+                  </>
+                )}
+
+                <hr className="border-border" />
+
+                {/* Riwayat Status */}
+                <div>
+                  <p className="font-semibold text-foreground flex items-center gap-1.5 mb-2"><Clock className="w-4 h-4" /> Riwayat Status</p>
+                  <div className="space-y-3">
+                    {deduplicatedLogs.map((log, idx) => {
+                      const prevLog = idx > 0 ? deduplicatedLogs[idx - 1] : null;
+                      const timeDiff = prevLog
+                        ? Math.round((new Date(log.created_at!).getTime() - new Date(prevLog.created_at!).getTime()) / 60000)
+                        : null;
+                      return (
+                        <div key={log.id} className="flex gap-2 text-xs">
+                          <div className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">
+                                {log.old_status ? `${STATUS_LABELS[log.old_status as OrderStatus]} → ` : ""}
+                                {STATUS_LABELS[log.new_status as OrderStatus]}
+                              </span>
+                              {timeDiff !== null && timeDiff > 0 && (
+                                <span className="text-muted-foreground bg-muted px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
+                                  <Clock className="w-2.5 h-2.5" /> {timeDiff} menit
+                                </span>
+                              )}
+                            </div>
+                            {log.notes && <p className="text-muted-foreground mt-0.5">{log.notes}</p>}
+                            <p className="text-muted-foreground">
+                              {new Date(log.created_at!).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })},{" "}
+                              {new Date(log.created_at!).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {deduplicatedLogs.length > 1 && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 pt-1 border-t border-border">
+                        <Clock className="w-3 h-3" />
+                        Total durasi: {Math.round((new Date(deduplicatedLogs[deduplicatedLogs.length - 1].created_at!).getTime() - new Date(deduplicatedLogs[0].created_at!).getTime()) / 60000)} menit
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2 pt-2">
+                  {nextStatus(selectedOrder.status) && (
+                    <Button
+                      className="w-full mcooler-gradient"
+                      disabled={statusMutation.isPending}
+                      onClick={() => statusMutation.mutate({ orderId: selectedOrder.order_id, status: nextStatus(selectedOrder.status)! })}
+                    >
+                      <Play className="w-4 h-4 mr-1" />
+                      {nextStatusLabel[selectedOrder.status] || STATUS_LABELS[nextStatus(selectedOrder.status)!]}
+                    </Button>
+                  )}
+                  {!["cancelled", "done"].includes(selectedOrder.status) && (
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      disabled={statusMutation.isPending}
+                      onClick={() => setShowCancelDialog(true)}
+                    >
+                      <Ban className="w-4 h-4 mr-1" /> Batalkan
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
+                      window.open(`https://wa.me/${encodeURIComponent(wa)}`, "_blank");
+                    }}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                  </Button>
+                  {selectedOrder.cust_latitude && selectedOrder.cust_longitude && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => window.open(`https://www.google.com/maps?q=${selectedOrder.cust_latitude},${selectedOrder.cust_longitude}`, "_blank")}
+                    >
+                      <MapPin className="w-4 h-4 mr-1" /> Buka Google Maps
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Reason Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={(open) => { if (!open) { setShowCancelDialog(false); setCancelReason(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Batalkan Pesanan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Alasan pembatalan wajib diisi:</p>
+            <Textarea
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              placeholder="Tuliskan alasan pembatalan..."
+              rows={3}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                disabled={!cancelReason.trim() || statusMutation.isPending}
+                onClick={() => {
+                  if (selectedOrder) {
+                    statusMutation.mutate({
+                      orderId: selectedOrder.order_id,
+                      status: "cancelled",
+                      cancelReason: cancelReason.trim(),
+                    });
+                  }
+                }}
+              >
+                {statusMutation.isPending ? "Membatalkan..." : "Konfirmasi Batal"}
+              </Button>
+              <Button variant="outline" onClick={() => { setShowCancelDialog(false); setCancelReason(""); }}>
+                Kembali
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Profile Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={(open) => !open && setShowProfileDialog(false)}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
