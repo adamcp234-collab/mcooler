@@ -124,58 +124,59 @@ export default function VendorDashboard() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Service mutations
-  const saveServiceMutation = useMutation({
-    mutationFn: async () => {
+  // Toggle service on/off with upsert
+  const toggleServiceMutation = useMutation({
+    mutationFn: async ({ masterServiceId, activate }: { masterServiceId: string; activate: boolean }) => {
       if (!mitraId) throw new Error("No mitra");
-      const updatePayload = {
-        price: parseInt(servicePrice) || 0,
-        description: serviceDesc || null,
-        is_active: true,
-      };
-      const insertPayload = {
-        mitra_id: mitraId,
-        master_service_id: serviceName, // serviceName here holds the master_service_id
-        price: parseInt(servicePrice) || 0,
-        description: serviceDesc || null,
-        is_active: true,
-      };
-      if (editingService) {
-        const { error } = await supabase.from("ms_service_det").update(updatePayload).eq("id", editingService.id);
+      const existing = vendorServices.find((s) => s.master_service_id === masterServiceId);
+      if (existing) {
+        if (!activate) {
+          const { error } = await supabase.from("ms_service_det").update({ is_active: false }).eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          // Will open edit form, not toggle directly
+        }
+      } else if (!activate) {
+        // Nothing to do
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Save service price/description (upsert)
+  const saveServiceMutation = useMutation({
+    mutationFn: async ({ masterServiceId }: { masterServiceId: string }) => {
+      if (!mitraId) throw new Error("No mitra");
+      const price = parseInt(servicePrice) || 0;
+      const desc = serviceDesc.trim();
+      if (price <= 0) throw new Error("Harga wajib diisi dan harus lebih besar dari 0");
+      if (!desc) throw new Error("Deskripsi wajib diisi");
+
+      const existing = vendorServices.find((s) => s.master_service_id === masterServiceId);
+      if (existing) {
+        const { error } = await supabase.from("ms_service_det").update({
+          price, description: desc, is_active: true,
+        }).eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("ms_service_det").insert(insertPayload);
+        const { error } = await supabase.from("ms_service_det").insert({
+          mitra_id: mitraId, master_service_id: masterServiceId,
+          price, description: desc, is_active: true,
+        });
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-      toast.success(editingService ? "Layanan diperbarui" : "Layanan ditambahkan");
-      closeServiceDialog();
+      toast.success("Layanan disimpan");
+      setEditingServiceId(null);
+      setServicePrice("");
+      setServiceDesc("");
     },
     onError: (err: any) => toast.error(err.message),
-  });
-
-  const deleteServiceMutation = useMutation({
-    mutationFn: async (serviceId: string) => {
-      const { error } = await supabase.from("ms_service_det").delete().eq("id", serviceId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-      toast.success("Layanan dihapus");
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const toggleServiceActive = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("ms_service_det").update({ is_active: active }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
-    },
   });
 
   // Profile mutation
@@ -200,27 +201,15 @@ export default function VendorDashboard() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const openServiceDialog = (service?: any) => {
-    if (service) {
-      setEditingService(service);
-      setServiceName(service.service_name);
-      setServicePrice(String(service.price));
-      setServiceDesc(service.description || "");
-    } else {
-      setEditingService(null);
-      setServiceName("");
-      setServicePrice("");
-      setServiceDesc("");
-    }
-    setShowServiceDialog(true);
-  };
+  // Helper: get vendor service detail for a master service
+  const getVendorService = (masterServiceId: string) =>
+    vendorServices.find((s) => s.master_service_id === masterServiceId);
 
-  const closeServiceDialog = () => {
-    setShowServiceDialog(false);
-    setEditingService(null);
-    setServiceName("");
-    setServicePrice("");
-    setServiceDesc("");
+  const startEditService = (masterServiceId: string) => {
+    const existing = getVendorService(masterServiceId);
+    setEditingServiceId(masterServiceId);
+    setServicePrice(existing?.price ? String(existing.price) : "");
+    setServiceDesc(existing?.description || "");
   };
 
   const openProfileDialog = () => {
