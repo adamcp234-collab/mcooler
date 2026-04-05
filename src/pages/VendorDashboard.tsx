@@ -311,6 +311,12 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-background">
       <Header mitraName={mitraProfile?.company_name || "Dashboard Vendor"} />
       <div className="container max-w-2xl px-4 py-6 space-y-6">
+        {isPendingVerification && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center gap-2 text-sm">
+            <Clock className="w-5 h-5 text-warning shrink-0" />
+            <span className="text-foreground">Akun Anda sedang menunggu verifikasi admin. Silakan lengkapi profil dan layanan terlebih dahulu.</span>
+          </div>
+        )}
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm text-muted-foreground">{user.email}</p>
