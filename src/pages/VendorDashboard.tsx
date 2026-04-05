@@ -118,12 +118,14 @@ export default function VendorDashboard() {
 
   // Order status mutation
   const statusMutation = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
-      updateOrderStatus(orderId, status),
+    mutationFn: ({ orderId, status, cancelReason }: { orderId: string; status: string; cancelReason?: string }) =>
+      updateOrderStatus(orderId, status, cancelReason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
       queryClient.invalidateQueries({ queryKey: ["status-logs"] });
       toast.success("Status order diperbarui");
+      setShowCancelDialog(false);
+      setCancelReason("");
     },
     onError: (err: any) => toast.error(err.message),
   });
