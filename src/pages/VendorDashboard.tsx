@@ -319,7 +319,7 @@ export default function VendorDashboard() {
               Order
               {stats.pending > 0 && <span className="ml-1 bg-warning text-warning-foreground text-[10px] rounded-full px-1.5">{stats.pending}</span>}
             </TabsTrigger>
-            <TabsTrigger value="services">Layanan ({services.length})</TabsTrigger>
+            <TabsTrigger value="services">Layanan ({vendorServices.filter(s => s.is_active).length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-3">
