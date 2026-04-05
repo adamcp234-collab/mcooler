@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           booking_date: string
           booking_time: string
+          cancel_reason: string | null
           completion_notes: string | null
           created_at: string | null
           cust_address_detail: string | null
@@ -35,6 +36,7 @@ export type Database = {
         Insert: {
           booking_date: string
           booking_time: string
+          cancel_reason?: string | null
           completion_notes?: string | null
           created_at?: string | null
           cust_address_detail?: string | null
@@ -52,6 +54,7 @@ export type Database = {
         Update: {
           booking_date?: string
           booking_time?: string
+          cancel_reason?: string | null
           completion_notes?: string | null
           created_at?: string | null
           cust_address_detail?: string | null
@@ -179,6 +182,47 @@ export type Database = {
           whatsapp_number?: string
         }
         Relationships: []
+      }
+      ms_service_det: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          master_service_id: string
+          mitra_id: string
+          price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          master_service_id: string
+          mitra_id: string
+          price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          master_service_id?: string
+          mitra_id?: string
+          price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ms_service_det_master_service_id_fkey"
+            columns: ["master_service_id"]
+            isOneToOne: false
+            referencedRelation: "master_services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_completion_photo: {
         Row: {
