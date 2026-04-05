@@ -821,6 +821,100 @@ export default function VendorDashboard() {
                 <MapPicker value={profileLocation || undefined} onChange={setProfileLocation} height="200px" />
                 {profileLocation && <p className="text-xs text-muted-foreground">📍 {profileLocation.lat.toFixed(5)}, {profileLocation.lng.toFixed(5)}</p>}
               </div>
+
+              {/* Photo uploads for verification */}
+              <hr className="border-border" />
+              <p className="text-sm font-semibold text-foreground">Foto Verifikasi</p>
+
+              {/* Identity photo */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Foto Identitas (KTP/SIM) *</Label>
+                {(() => {
+                  const newPhoto = profilePhotos.find(p => p.type === "identity");
+                  const existingPhoto = existingPhotos.find(p => p.photo_type === "identity");
+                  if (newPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={newPhoto.preview} alt="KTP" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(newPhoto))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                      </div>
+                    );
+                  }
+                  if (existingPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={existingPhoto.file_path} alt="KTP" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeExistingPhoto(existingPhoto.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                        <span className="absolute bottom-1 left-1 bg-accent/80 text-accent-foreground text-[10px] px-1.5 py-0.5 rounded">Sudah diupload</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleProfileFileSelect("identity", "Foto KTP/SIM")}>
+                      <Camera className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-xs text-muted-foreground">Klik untuk upload foto identitas</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Equipment photo */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Upload className="w-3.5 h-3.5" /> Foto Diri + Peralatan Lengkap *</Label>
+                {(() => {
+                  const newPhoto = profilePhotos.find(p => p.type === "equipment");
+                  const existingPhoto = existingPhotos.find(p => p.photo_type === "equipment");
+                  if (newPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={newPhoto.preview} alt="Peralatan" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(newPhoto))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                      </div>
+                    );
+                  }
+                  if (existingPhoto) {
+                    return (
+                      <div className="relative">
+                        <img src={existingPhoto.file_path} alt="Peralatan" className="w-full h-36 object-cover rounded border border-border" />
+                        <button onClick={() => removeExistingPhoto(existingPhoto.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"><X className="w-3 h-3" /></button>
+                        <span className="absolute bottom-1 left-1 bg-accent/80 text-accent-foreground text-[10px] px-1.5 py-0.5 rounded">Sudah diupload</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleProfileFileSelect("equipment", "Foto Diri + Peralatan")}>
+                      <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-xs text-muted-foreground">Klik untuk upload foto diri bersama peralatan</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Optional photos */}
+              <div className="space-y-2">
+                <Label>Foto Tambahan (Opsional)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {existingPhotos.filter(p => p.photo_type !== "identity" && p.photo_type !== "equipment").map(photo => (
+                    <div key={photo.id} className="relative">
+                      <img src={photo.file_path} alt={photo.photo_type} className="w-full h-20 object-cover rounded border border-border" />
+                      <button onClick={() => removeExistingPhoto(photo.id)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                  {profilePhotos.filter(p => p.type !== "identity" && p.type !== "equipment").map((photo, i) => (
+                    <div key={`new-${i}`} className="relative">
+                      <img src={photo.preview} alt={photo.label} className="w-full h-20 object-cover rounded border border-border" />
+                      <button onClick={() => removeProfilePhoto(profilePhotos.indexOf(photo))} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                  <button className="h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50" onClick={() => handleProfileFileSelect("certificate", "Sertifikat")}>
+                    <Award className="w-4 h-4 mb-0.5" /><span className="text-[10px]">Sertifikat</span>
+                  </button>
+                  <button className="h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50" onClick={() => handleProfileFileSelect("other", "Foto Lainnya")}>
+                    <Plus className="w-4 h-4 mb-0.5" /><span className="text-[10px]">Lainnya</span>
+                  </button>
+                </div>
+              </div>
+
               <Button
                 className="w-full mcooler-gradient"
                 onClick={() => saveProfileMutation.mutate()}
