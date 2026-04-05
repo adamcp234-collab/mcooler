@@ -35,6 +35,8 @@ export default function VendorDashboard() {
   const [activeTab, setActiveTab] = useState("orders");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>("all");
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   // Service edit state
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
