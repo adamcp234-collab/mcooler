@@ -248,6 +248,40 @@ export default function VendorDashboard() {
 
   const filteredOrders = orderFilter === "all" ? orders : orders.filter(o => o.status === orderFilter);
 
+  // Deduplicate status logs (same old_status, new_status, notes, created_at)
+  const deduplicatedLogs = useMemo(() => {
+    const seen = new Set<string>();
+    return statusLogs.filter((log) => {
+      const key = `${log.old_status}-${log.new_status}-${log.notes}-${log.created_at}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [statusLogs]);
+
+  // Compute distance & travel time between vendor and customer
+  const orderDistance = useMemo(() => {
+    if (!selectedOrder || !mitraProfile) return null;
+    const vLat = mitraProfile.latitude;
+    const vLng = mitraProfile.longitude;
+    const cLat = selectedOrder.cust_latitude;
+    const cLng = selectedOrder.cust_longitude;
+    if (!vLat || !vLng || !cLat || !cLng) return null;
+    const R = 6371;
+    const dLat = ((cLat - vLat) * Math.PI) / 180;
+    const dLng = ((cLng - vLng) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((vLat * Math.PI) / 180) * Math.cos((cLat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const minutes = Math.round(km * 2); // rough estimate ~30km/h
+    return { km: km.toFixed(1), minutes };
+  }, [selectedOrder, mitraProfile]);
+
+  const nextStatusLabel: Record<string, string> = {
+    pending: "Konfirmasi",
+    confirmed: "Mulai Pengerjaan",
+    on_progress: "Selesaikan",
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
   if (!user) return null;
 
