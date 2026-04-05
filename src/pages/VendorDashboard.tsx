@@ -223,6 +223,15 @@ export default function VendorDashboard() {
           ? { lat: mitraProfile.latitude, lng: mitraProfile.longitude }
           : null
       );
+    } else {
+      // New vendor with no profile data yet — initialize with defaults
+      setProfileData({
+        company_name: user?.user_metadata?.full_name || "",
+        whatsapp_number: "",
+        email: user?.email || "",
+        address_full: "",
+      });
+      setProfileLocation(null);
     }
     setShowProfileDialog(true);
   };
