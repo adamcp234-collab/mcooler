@@ -510,11 +510,13 @@ export default function VendorDashboard() {
                 </div>
               </DialogHeader>
               <div className="px-4 pb-4 space-y-4 text-sm">
-                {/* Order ID */}
-                <div className="space-y-1">
-                  <p className="font-semibold text-foreground">Nomor Pesanan</p>
-                  <p className="text-foreground font-mono">{selectedOrder.order_id}</p>
-                </div>
+                {/* Order ID - hidden when pending */}
+                {selectedOrder.status !== "pending" && (
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground">Nomor Pesanan</p>
+                    <p className="text-foreground font-mono">{selectedOrder.order_id}</p>
+                  </div>
+                )}
 
                 <hr className="border-border" />
 
