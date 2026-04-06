@@ -732,10 +732,36 @@ export default function VendorDashboard() {
                     <Button
                       className="w-full mcooler-gradient"
                       disabled={statusMutation.isPending}
-                      onClick={() => statusMutation.mutate({ orderId: selectedOrder.order_id, status: nextStatus(selectedOrder.status)! })}
+                      onClick={() => {
+                        const next = nextStatus(selectedOrder.status)!;
+                        if (next === "done") {
+                          // Show reminder dialog before completing
+                          setCompletingOrderId(selectedOrder.order_id);
+                          setReminderDays("90");
+                          setReminderNotes("");
+                          setShowReminderDialog(true);
+                        } else {
+                          statusMutation.mutate({ orderId: selectedOrder.order_id, status: next });
+                        }
+                      }}
                     >
                       <Play className="w-4 h-4 mr-1" />
                       {nextStatusLabel[selectedOrder.status] || STATUS_LABELS[nextStatus(selectedOrder.status)!]}
+                    </Button>
+                  )}
+                  {/* Reschedule button - only for confirmed/on_progress */}
+                  {["confirmed", "on_progress"].includes(selectedOrder.status) && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setRescheduleDate("");
+                        setRescheduleTime("");
+                        setRescheduleReason("");
+                        setShowRescheduleDialog(true);
+                      }}
+                    >
+                      <CalendarClock className="w-4 h-4 mr-1" /> Reschedule
                     </Button>
                   )}
                   {!["cancelled", "done"].includes(selectedOrder.status) && (
