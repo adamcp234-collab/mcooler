@@ -29,6 +29,7 @@ import {
 } from "@/lib/api";
 import { STATUS_LABELS, STATUS_COLORS, type OrderStatus } from "@/data/services";
 import { useAuth } from "@/hooks/useAuth";
+import RemindersTab from "@/components/RemindersTab";
 import MapPicker from "@/components/MapPicker";
 
 export default function VendorDashboard() {
