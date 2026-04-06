@@ -288,6 +288,56 @@ export type Database = {
           },
         ]
       }
+      order_reschedules: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          new_date: string
+          new_time: string
+          old_date: string
+          old_time: string
+          order_id: string
+          reason: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          new_date: string
+          new_time: string
+          old_date: string
+          old_time: string
+          order_id: string
+          reason?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          new_date?: string
+          new_time?: string
+          old_date?: string
+          old_time?: string
+          order_id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_reschedules_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "ec_order_head"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
       order_status_log: {
         Row: {
           changed_by: string
@@ -319,6 +369,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "order_status_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "ec_order_head"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
+      service_reminders: {
+        Row: {
+          created_at: string | null
+          cust_name: string
+          cust_whatsapp: string
+          id: string
+          is_sent: boolean
+          mitra_id: string
+          notes: string | null
+          order_id: string
+          reminder_date: string
+          reminder_days: number
+          sent_at: string | null
+          service_summary: string
+        }
+        Insert: {
+          created_at?: string | null
+          cust_name: string
+          cust_whatsapp: string
+          id?: string
+          is_sent?: boolean
+          mitra_id: string
+          notes?: string | null
+          order_id: string
+          reminder_date: string
+          reminder_days?: number
+          sent_at?: string | null
+          service_summary: string
+        }
+        Update: {
+          created_at?: string | null
+          cust_name?: string
+          cust_whatsapp?: string
+          id?: string
+          is_sent?: boolean
+          mitra_id?: string
+          notes?: string | null
+          order_id?: string
+          reminder_date?: string
+          reminder_days?: number
+          sent_at?: string | null
+          service_summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reminders_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "ec_order_head"
