@@ -982,6 +982,161 @@ export default function VendorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={showRescheduleDialog} onOpenChange={(open) => { if (!open) setShowRescheduleDialog(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CalendarClock className="w-5 h-5" /> Reschedule Jadwal</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-3">
+              <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+                <p className="font-medium text-foreground">Jadwal saat ini:</p>
+                <p className="text-muted-foreground">{selectedOrder.booking_date} • {selectedOrder.booking_time}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Tanggal Baru *</Label>
+                <Input type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Waktu Baru *</Label>
+                <Input type="time" value={rescheduleTime} onChange={e => setRescheduleTime(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Alasan Reschedule</Label>
+                <Textarea value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} placeholder="Alasan perubahan jadwal..." rows={2} />
+              </div>
+              <Button
+                className="w-full mcooler-gradient"
+                disabled={!rescheduleDate || !rescheduleTime}
+                onClick={async () => {
+                  if (!selectedOrder || !mitraId) return;
+                  try {
+                    // Save reschedule record
+                    const { error } = await supabase.from("order_reschedules").insert({
+                      order_id: selectedOrder.order_id,
+                      old_date: selectedOrder.booking_date,
+                      old_time: selectedOrder.booking_time,
+                      new_date: rescheduleDate,
+                      new_time: rescheduleTime,
+                      reason: rescheduleReason || null,
+                    });
+                    if (error) throw error;
+
+                    // Generate WhatsApp message to customer
+                    const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
+                    const newDateFormatted = format(parseISO(rescheduleDate), "d MMMM yyyy", { locale: idLocale });
+                    const message = `Halo ${selectedOrder.cust_name}! 👋\n\nMohon maaf, kami perlu mengubah jadwal service AC Anda.\n\nJadwal lama: ${selectedOrder.booking_date} pukul ${selectedOrder.booking_time}\nJadwal baru: ${newDateFormatted} pukul ${rescheduleTime}\n\n${rescheduleReason ? `Alasan: ${rescheduleReason}\n\n` : ""}Mohon konfirmasi apakah jadwal baru ini cocok untuk Anda. Balas "OK" untuk menyetujui atau usulkan waktu lain.\n\nTerima kasih 🙏`;
+                    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(message)}`, "_blank");
+
+                    toast.success("Permintaan reschedule dibuat & pesan WA disiapkan");
+                    setShowRescheduleDialog(false);
+                    queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
+                  } catch (err: any) {
+                    toast.error(err.message);
+                  }
+                }}
+              >
+                <Send className="w-4 h-4 mr-1" /> Kirim Reschedule via WA
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Dialog (shown when completing order) */}
+      <Dialog open={showReminderDialog} onOpenChange={(open) => { if (!open) setShowReminderDialog(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Bell className="w-5 h-5" /> Reminder Service Rutin</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Atur pengingat untuk mengingatkan pelanggan service rutin berikutnya.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-xs">Ingatkan dalam (hari)</Label>
+              <div className="flex gap-2">
+                {["30", "60", "90", "120", "180"].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setReminderDays(d)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                      reminderDays === d
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-muted-foreground border-border hover:border-primary/30"
+                    )}
+                  >
+                    {d} hari
+                  </button>
+                ))}
+              </div>
+              <Input
+                type="number"
+                value={reminderDays}
+                onChange={e => setReminderDays(e.target.value)}
+                placeholder="Jumlah hari"
+                className="mt-1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Catatan (opsional)</Label>
+              <Textarea value={reminderNotes} onChange={e => setReminderNotes(e.target.value)} placeholder="Catatan untuk reminder..." rows={2} />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 mcooler-gradient"
+                disabled={!reminderDays || statusMutation.isPending}
+                onClick={async () => {
+                  if (!completingOrderId) return;
+                  const order = orders.find(o => o.order_id === completingOrderId);
+                  if (!order || !mitraId) return;
+                  try {
+                    const days = parseInt(reminderDays) || 90;
+                    const reminderDate = format(addDays(new Date(), days), "yyyy-MM-dd");
+                    const serviceSummary = (order.selected_services as any[])?.map((s: any) => s.serviceName).join(", ") || "-";
+
+                    // Create reminder
+                    await supabase.from("service_reminders").insert({
+                      order_id: order.order_id,
+                      mitra_id: mitraId,
+                      cust_name: order.cust_name,
+                      cust_whatsapp: order.cust_whatsapp,
+                      service_summary: serviceSummary,
+                      reminder_days: days,
+                      reminder_date: reminderDate,
+                      notes: reminderNotes || null,
+                    });
+
+                    // Complete the order
+                    statusMutation.mutate({ orderId: completingOrderId, status: "done" });
+                    queryClient.invalidateQueries({ queryKey: ["service-reminders"] });
+                    setShowReminderDialog(false);
+                    toast.success(`Order selesai! Reminder di-set untuk ${days} hari lagi.`);
+                  } catch (err: any) {
+                    toast.error(err.message);
+                  }
+                }}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" /> Selesai + Set Reminder
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (completingOrderId) {
+                    statusMutation.mutate({ orderId: completingOrderId, status: "done" });
+                  }
+                  setShowReminderDialog(false);
+                }}
+              >
+                Lewati
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
