@@ -41,6 +41,18 @@ export default function VendorDashboard() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
+  // Reschedule state
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
+
+  // Reminder state (shown when completing an order)
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [reminderDays, setReminderDays] = useState("90");
+  const [reminderNotes, setReminderNotes] = useState("");
+  const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
+
   // Service edit state
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [servicePrice, setServicePrice] = useState("");
