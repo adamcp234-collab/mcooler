@@ -328,12 +328,17 @@ export default function VendorDashboard() {
     .filter((o) => o.status === "done")
     .reduce((sum, o) => sum + ((o.selected_services as any[])?.reduce((s: number, sv: any) => s + (sv.price || 0), 0) || 0), 0);
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayOrders = orders.filter(o => o.booking_date === todayStr && !["cancelled", "done"].includes(o.status));
+
   const nextStatus = (status: string): OrderStatus | null => {
     const flow: Record<string, OrderStatus> = { pending: "confirmed", confirmed: "on_progress", on_progress: "done" };
     return flow[status] || null;
   };
 
-  const filteredOrders = orderFilter === "all" ? orders : orders.filter(o => o.status === orderFilter);
+  const filteredOrders = orderFilter === "all" ? orders 
+    : orderFilter === "today" ? todayOrders
+    : orders.filter(o => o.status === orderFilter);
 
   // Deduplicate status logs (same old_status, new_status, notes, created_at)
   const deduplicatedLogs = useMemo(() => {
