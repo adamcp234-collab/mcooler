@@ -152,7 +152,7 @@ export default function BookingPage() {
         })),
       });
       toast.success("Order berhasil dibuat!", { description: `No. Order: ${order.order_id}` });
-      navigate(`/order-success/${order.order_id}`);
+      navigate(`/order-success/${order.order_id}?token=${order.order_token}`);
     } catch (err: any) {
       toast.error("Gagal membuat order", { description: err.message });
     } finally {

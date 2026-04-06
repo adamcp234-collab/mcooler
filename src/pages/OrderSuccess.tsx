@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CheckCircle, Home, Clock, Truck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
