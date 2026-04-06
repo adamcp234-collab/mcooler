@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CheckCircle, Home, Clock, Truck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { fetchOrderById, fetchStatusLogs } from "@/lib/api";
 
 export default function OrderSuccess() {
   const { orderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const orderToken = searchParams.get("token");
   const [order, setOrder] = useState<any>(null);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function OrderSuccess() {
     
     const loadData = async () => {
       const [orderData, logs] = await Promise.all([
-        fetchOrderById(orderId),
+        fetchOrderById(orderId, orderToken || undefined),
         fetchStatusLogs(orderId),
       ]);
       setOrder(orderData);

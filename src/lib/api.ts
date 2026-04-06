@@ -111,7 +111,17 @@ export async function createOrder(params: {
 // ORDER QUERIES
 // ============================================
 
-export async function fetchOrderById(orderId: string) {
+export async function fetchOrderById(orderId: string, orderToken?: string) {
+  // If token provided, use secure RPC for guest access
+  if (orderToken) {
+    const { data, error } = await supabase.rpc("get_order_by_token" as any, {
+      _order_id: orderId,
+      _token: orderToken,
+    });
+    if (error) throw error;
+    return (data as any)?.[0] || null;
+  }
+  // For authenticated users (vendors/admins), use direct query
   const { data, error } = await supabase
     .from("ec_order_head")
     .select("*")
