@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { format, addDays, isToday, parseISO } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import {
   Package, AlertCircle, Clock, CheckCircle, MapPin, LogOut, Pencil, Settings, Save,
   Calendar, Phone, Mail, MapPinIcon, MessageCircle, Navigation, X, Play, Ban, Eye,
-  Camera, Upload, Award, Plus
+  Camera, Upload, Award, Plus, CalendarClock, Bell, RefreshCw, Send
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ import {
 } from "@/lib/api";
 import { STATUS_LABELS, STATUS_COLORS, type OrderStatus } from "@/data/services";
 import { useAuth } from "@/hooks/useAuth";
+import RemindersTab from "@/components/RemindersTab";
 import MapPicker from "@/components/MapPicker";
 
 export default function VendorDashboard() {
@@ -38,6 +41,18 @@ export default function VendorDashboard() {
   const [orderFilter, setOrderFilter] = useState<string>("all");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Reschedule state
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
+
+  // Reminder state (shown when completing an order)
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [reminderDays, setReminderDays] = useState("90");
+  const [reminderNotes, setReminderNotes] = useState("");
+  const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
 
   // Service edit state
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
@@ -314,12 +329,17 @@ export default function VendorDashboard() {
     .filter((o) => o.status === "done")
     .reduce((sum, o) => sum + ((o.selected_services as any[])?.reduce((s: number, sv: any) => s + (sv.price || 0), 0) || 0), 0);
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayOrders = orders.filter(o => o.booking_date === todayStr && !["cancelled", "done"].includes(o.status));
+
   const nextStatus = (status: string): OrderStatus | null => {
     const flow: Record<string, OrderStatus> = { pending: "confirmed", confirmed: "on_progress", on_progress: "done" };
     return flow[status] || null;
   };
 
-  const filteredOrders = orderFilter === "all" ? orders : orders.filter(o => o.status === orderFilter);
+  const filteredOrders = orderFilter === "all" ? orders 
+    : orderFilter === "today" ? todayOrders
+    : orders.filter(o => o.status === orderFilter);
 
   // Deduplicate status logs (same old_status, new_status, notes, created_at)
   const deduplicatedLogs = useMemo(() => {
@@ -418,18 +438,22 @@ export default function VendorDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="orders">
               Order
               {stats.pending > 0 && <span className="ml-1 bg-warning text-warning-foreground text-[10px] rounded-full px-1.5">{stats.pending}</span>}
             </TabsTrigger>
-            <TabsTrigger value="services">Layanan ({vendorServices.filter(s => s.is_active).length})</TabsTrigger>
+            <TabsTrigger value="services">Layanan</TabsTrigger>
+            <TabsTrigger value="reminders">
+              <Bell className="w-3.5 h-3.5 mr-1" /> Reminder
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-3">
             {/* Order filter */}
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {[
+                { key: "today", label: `Hari Ini (${todayOrders.length})` },
                 { key: "all", label: "Semua" },
                 { key: "pending", label: "Pending" },
                 { key: "confirmed", label: "Dikonfirmasi" },
@@ -551,6 +575,11 @@ export default function VendorDashboard() {
                 </div>
               );
             })}
+          </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="space-y-3">
+            <RemindersTab mitraId={mitraId} />
           </TabsContent>
         </Tabs>
       </div>
@@ -709,10 +738,36 @@ export default function VendorDashboard() {
                     <Button
                       className="w-full mcooler-gradient"
                       disabled={statusMutation.isPending}
-                      onClick={() => statusMutation.mutate({ orderId: selectedOrder.order_id, status: nextStatus(selectedOrder.status)! })}
+                      onClick={() => {
+                        const next = nextStatus(selectedOrder.status)!;
+                        if (next === "done") {
+                          // Show reminder dialog before completing
+                          setCompletingOrderId(selectedOrder.order_id);
+                          setReminderDays("90");
+                          setReminderNotes("");
+                          setShowReminderDialog(true);
+                        } else {
+                          statusMutation.mutate({ orderId: selectedOrder.order_id, status: next });
+                        }
+                      }}
                     >
                       <Play className="w-4 h-4 mr-1" />
                       {nextStatusLabel[selectedOrder.status] || STATUS_LABELS[nextStatus(selectedOrder.status)!]}
+                    </Button>
+                  )}
+                  {/* Reschedule button - only for confirmed/on_progress */}
+                  {["confirmed", "on_progress"].includes(selectedOrder.status) && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setRescheduleDate("");
+                        setRescheduleTime("");
+                        setRescheduleReason("");
+                        setShowRescheduleDialog(true);
+                      }}
+                    >
+                      <CalendarClock className="w-4 h-4 mr-1" /> Reschedule
                     </Button>
                   )}
                   {!["cancelled", "done"].includes(selectedOrder.status) && (
@@ -925,6 +980,161 @@ export default function VendorDashboard() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={showRescheduleDialog} onOpenChange={(open) => { if (!open) setShowRescheduleDialog(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CalendarClock className="w-5 h-5" /> Reschedule Jadwal</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-3">
+              <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+                <p className="font-medium text-foreground">Jadwal saat ini:</p>
+                <p className="text-muted-foreground">{selectedOrder.booking_date} • {selectedOrder.booking_time}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Tanggal Baru *</Label>
+                <Input type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Waktu Baru *</Label>
+                <Input type="time" value={rescheduleTime} onChange={e => setRescheduleTime(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Alasan Reschedule</Label>
+                <Textarea value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} placeholder="Alasan perubahan jadwal..." rows={2} />
+              </div>
+              <Button
+                className="w-full mcooler-gradient"
+                disabled={!rescheduleDate || !rescheduleTime}
+                onClick={async () => {
+                  if (!selectedOrder || !mitraId) return;
+                  try {
+                    // Save reschedule record
+                    const { error } = await supabase.from("order_reschedules").insert({
+                      order_id: selectedOrder.order_id,
+                      old_date: selectedOrder.booking_date,
+                      old_time: selectedOrder.booking_time,
+                      new_date: rescheduleDate,
+                      new_time: rescheduleTime,
+                      reason: rescheduleReason || null,
+                    });
+                    if (error) throw error;
+
+                    // Generate WhatsApp message to customer
+                    const wa = selectedOrder.cust_whatsapp.replace(/^0/, "62");
+                    const newDateFormatted = format(parseISO(rescheduleDate), "d MMMM yyyy", { locale: idLocale });
+                    const message = `Halo ${selectedOrder.cust_name}! 👋\n\nMohon maaf, kami perlu mengubah jadwal service AC Anda.\n\nJadwal lama: ${selectedOrder.booking_date} pukul ${selectedOrder.booking_time}\nJadwal baru: ${newDateFormatted} pukul ${rescheduleTime}\n\n${rescheduleReason ? `Alasan: ${rescheduleReason}\n\n` : ""}Mohon konfirmasi apakah jadwal baru ini cocok untuk Anda. Balas "OK" untuk menyetujui atau usulkan waktu lain.\n\nTerima kasih 🙏`;
+                    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(message)}`, "_blank");
+
+                    toast.success("Permintaan reschedule dibuat & pesan WA disiapkan");
+                    setShowRescheduleDialog(false);
+                    queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
+                  } catch (err: any) {
+                    toast.error(err.message);
+                  }
+                }}
+              >
+                <Send className="w-4 h-4 mr-1" /> Kirim Reschedule via WA
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Dialog (shown when completing order) */}
+      <Dialog open={showReminderDialog} onOpenChange={(open) => { if (!open) setShowReminderDialog(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Bell className="w-5 h-5" /> Reminder Service Rutin</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Atur pengingat untuk mengingatkan pelanggan service rutin berikutnya.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-xs">Ingatkan dalam (hari)</Label>
+              <div className="flex gap-2">
+                {["30", "60", "90", "120", "180"].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setReminderDays(d)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                      reminderDays === d
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-muted-foreground border-border hover:border-primary/30"
+                    )}
+                  >
+                    {d} hari
+                  </button>
+                ))}
+              </div>
+              <Input
+                type="number"
+                value={reminderDays}
+                onChange={e => setReminderDays(e.target.value)}
+                placeholder="Jumlah hari"
+                className="mt-1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Catatan (opsional)</Label>
+              <Textarea value={reminderNotes} onChange={e => setReminderNotes(e.target.value)} placeholder="Catatan untuk reminder..." rows={2} />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 mcooler-gradient"
+                disabled={!reminderDays || statusMutation.isPending}
+                onClick={async () => {
+                  if (!completingOrderId) return;
+                  const order = orders.find(o => o.order_id === completingOrderId);
+                  if (!order || !mitraId) return;
+                  try {
+                    const days = parseInt(reminderDays) || 90;
+                    const reminderDate = format(addDays(new Date(), days), "yyyy-MM-dd");
+                    const serviceSummary = (order.selected_services as any[])?.map((s: any) => s.serviceName).join(", ") || "-";
+
+                    // Create reminder
+                    await supabase.from("service_reminders").insert({
+                      order_id: order.order_id,
+                      mitra_id: mitraId,
+                      cust_name: order.cust_name,
+                      cust_whatsapp: order.cust_whatsapp,
+                      service_summary: serviceSummary,
+                      reminder_days: days,
+                      reminder_date: reminderDate,
+                      notes: reminderNotes || null,
+                    });
+
+                    // Complete the order
+                    statusMutation.mutate({ orderId: completingOrderId, status: "done" });
+                    queryClient.invalidateQueries({ queryKey: ["service-reminders"] });
+                    setShowReminderDialog(false);
+                    toast.success(`Order selesai! Reminder di-set untuk ${days} hari lagi.`);
+                  } catch (err: any) {
+                    toast.error(err.message);
+                  }
+                }}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" /> Selesai + Set Reminder
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (completingOrderId) {
+                    statusMutation.mutate({ orderId: completingOrderId, status: "done" });
+                  }
+                  setShowReminderDialog(false);
+                }}
+              >
+                Lewati
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
