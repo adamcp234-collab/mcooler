@@ -452,6 +452,7 @@ export default function VendorDashboard() {
             {/* Order filter */}
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {[
+                { key: "today", label: `Hari Ini (${todayOrders.length})` },
                 { key: "all", label: "Semua" },
                 { key: "pending", label: "Pending" },
                 { key: "confirmed", label: "Dikonfirmasi" },
