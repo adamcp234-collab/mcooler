@@ -575,6 +575,11 @@ export default function VendorDashboard() {
               );
             })}
           </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="space-y-3">
+            <RemindersTab mitraId={mitraId} />
+          </TabsContent>
         </Tabs>
       </div>
 
