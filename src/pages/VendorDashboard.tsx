@@ -437,12 +437,15 @@ export default function VendorDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="orders">
               Order
               {stats.pending > 0 && <span className="ml-1 bg-warning text-warning-foreground text-[10px] rounded-full px-1.5">{stats.pending}</span>}
             </TabsTrigger>
-            <TabsTrigger value="services">Layanan ({vendorServices.filter(s => s.is_active).length})</TabsTrigger>
+            <TabsTrigger value="services">Layanan</TabsTrigger>
+            <TabsTrigger value="reminders">
+              <Bell className="w-3.5 h-3.5 mr-1" /> Reminder
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-3">
