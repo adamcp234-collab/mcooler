@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { translateError } from "@/lib/errorMessages";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,7 +117,7 @@ export default function VendorOnboarding() {
         })
         .eq("mitra_id", mitraId);
       if (error) {
-        toast.error(error.message);
+        toast.error(translateError(error.message));
         setSubmitting(false);
         return;
       }
@@ -136,7 +137,7 @@ export default function VendorOnboarding() {
         registration_status: "pending_verification" as any,
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(translateError(error.message));
         setSubmitting(false);
         return;
       }
@@ -166,7 +167,7 @@ export default function VendorOnboarding() {
         .from("vendor-photos")
         .upload(path, photo.file);
       if (uploadErr) {
-        toast.error(`Gagal upload ${photo.label}: ${uploadErr.message}`);
+        toast.error(`Gagal upload ${photo.label}: ${translateError(uploadErr.message)}`);
         setSubmitting(false);
         return;
       }

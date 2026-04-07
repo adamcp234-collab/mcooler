@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { translateError } from "@/lib/errorMessages";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -145,7 +146,7 @@ export default function VendorDashboard() {
       setShowCancelDialog(false);
       setCancelReason("");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(translateError(err.message)),
   });
 
   // Toggle service on/off with upsert
@@ -167,7 +168,7 @@ export default function VendorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendor-services"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(translateError(err.message)),
   });
 
   // Save service price/description (upsert)
@@ -200,7 +201,7 @@ export default function VendorDashboard() {
       setServicePrice("");
       setServiceDesc("");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(translateError(err.message)),
   });
 
   // Profile mutation
@@ -247,7 +248,7 @@ export default function VendorDashboard() {
       setShowProfileDialog(false);
       setProfilePhotos([]);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(translateError(err.message)),
   });
 
   // Helper: get vendor service detail for a master service
@@ -1004,7 +1005,7 @@ export default function VendorDashboard() {
                   setSavingPassword(true);
                   const { error } = await supabase.auth.updateUser({ password: newPassword });
                   setSavingPassword(false);
-                  if (error) { toast.error(error.message); } else {
+                  if (error) { toast.error(translateError(error.message)); } else {
                     toast.success("Password berhasil diatur!");
                     setNewPassword("");
                     setConfirmNewPassword("");
@@ -1069,7 +1070,7 @@ export default function VendorDashboard() {
                     setShowRescheduleDialog(false);
                     queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
                   } catch (err: any) {
-                    toast.error(err.message);
+                    toast.error(translateError(err.message));
                   }
                 }}
               >
@@ -1151,7 +1152,7 @@ export default function VendorDashboard() {
                     setShowReminderDialog(false);
                     toast.success(`Order selesai! Reminder di-set untuk ${days} hari lagi.`);
                   } catch (err: any) {
-                    toast.error(err.message);
+                    toast.error(translateError(err.message));
                   }
                 }}
               >

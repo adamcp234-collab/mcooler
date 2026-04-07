@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { translateError } from "@/lib/errorMessages";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ export default function AdminAuth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(translateError(error.message));
     } else {
       toast.success("Login berhasil");
       // useEffect will handle redirect once roles are loaded
@@ -43,7 +44,7 @@ export default function AdminAuth() {
     });
     setSubmitting(false);
     if (result.error) {
-      toast.error(result.error.message || "Google login gagal");
+      toast.error(translateError(result.error.message) || "Google login gagal");
       return;
     }
     if (result.redirected) return;

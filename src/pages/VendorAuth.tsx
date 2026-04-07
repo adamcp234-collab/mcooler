@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { translateError } from "@/lib/errorMessages";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ export default function VendorAuth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(translateError(error.message));
     } else {
       toast.success("Login berhasil");
     }
@@ -56,7 +57,7 @@ export default function VendorAuth() {
     });
     if (error) {
       setSubmitting(false);
-      toast.error(error.message);
+      toast.error(translateError(error.message));
       return;
     }
     if (data.user && !data.session) {
@@ -94,7 +95,7 @@ export default function VendorAuth() {
     });
     setSubmitting(false);
     if (result.error) {
-      toast.error(result.error.message || "Google login gagal");
+      toast.error(translateError(result.error.message) || "Google login gagal");
     }
     // After redirect back, useEffect will handle navigation
   };
@@ -162,7 +163,7 @@ export default function VendorAuth() {
                         });
                         setSubmitting(false);
                         if (error) {
-                          toast.error(error.message);
+                          toast.error(translateError(error.message));
                         } else {
                           toast.success("Link reset password telah dikirim ke email Anda");
                         }
