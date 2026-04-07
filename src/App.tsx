@@ -30,6 +30,7 @@ const App = () => (
             <Route path="/booking/:mitraSlug" element={<BookingPage />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
             <Route path="/vendor/auth" element={<VendorAuth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
             <Route path="/vendor" element={<VendorDashboard />} />
             <Route path="/admin/auth" element={<AdminAuth />} />
