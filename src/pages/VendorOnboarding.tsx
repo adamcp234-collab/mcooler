@@ -117,7 +117,7 @@ export default function VendorOnboarding() {
         })
         .eq("mitra_id", mitraId);
       if (error) {
-        toast.error(error.message);
+        toast.error(translateError(error.message));
         setSubmitting(false);
         return;
       }
@@ -137,7 +137,7 @@ export default function VendorOnboarding() {
         registration_status: "pending_verification" as any,
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(translateError(error.message));
         setSubmitting(false);
         return;
       }
@@ -167,7 +167,7 @@ export default function VendorOnboarding() {
         .from("vendor-photos")
         .upload(path, photo.file);
       if (uploadErr) {
-        toast.error(`Gagal upload ${photo.label}: ${uploadErr.message}`);
+        toast.error(`Gagal upload ${photo.label}: ${translateError(uploadErr.message)}`);
         setSubmitting(false);
         return;
       }
