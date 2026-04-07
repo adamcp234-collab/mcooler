@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import VendorAuth from "./pages/VendorAuth";
 import AdminAuth from "./pages/AdminAuth";
 import VendorOnboarding from "./pages/VendorOnboarding";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/booking/:mitraSlug" element={<BookingPage />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
             <Route path="/vendor/auth" element={<VendorAuth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
             <Route path="/vendor" element={<VendorDashboard />} />
             <Route path="/admin/auth" element={<AdminAuth />} />

@@ -147,6 +147,31 @@ export default function VendorAuth() {
                   <Button type="submit" className="w-full mcooler-gradient" disabled={submitting}>
                     {submitting ? "Memproses..." : "Login"}
                   </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={async () => {
+                        if (!email) {
+                          toast.error("Masukkan email terlebih dahulu");
+                          return;
+                        }
+                        setSubmitting(true);
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: window.location.origin + "/reset-password",
+                        });
+                        setSubmitting(false);
+                        if (error) {
+                          toast.error(error.message);
+                        } else {
+                          toast.success("Link reset password telah dikirim ke email Anda");
+                        }
+                      }}
+                      disabled={submitting}
+                    >
+                      Lupa password?
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
               <TabsContent value="register">
