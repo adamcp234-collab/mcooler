@@ -65,6 +65,9 @@ export default function VendorDashboard() {
   const [profileLocation, setProfileLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [profilePhotos, setProfilePhotos] = useState<{ file: File; preview: string; type: string; label: string }[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -977,6 +980,38 @@ export default function VendorDashboard() {
               >
                 <Save className="w-4 h-4 mr-1" />
                 {saveProfileMutation.isPending ? "Menyimpan..." : "Simpan Profil"}
+              </Button>
+
+              {/* Set / Change Password section */}
+              <hr className="border-border" />
+              <p className="text-sm font-semibold text-foreground">Atur Password Login</p>
+              <p className="text-xs text-muted-foreground">Atur password agar Anda juga bisa login dengan email &amp; password (selain Google).</p>
+              <div className="space-y-2">
+                <Label htmlFor="set-password">Password Baru</Label>
+                <Input id="set-password" type="password" minLength={6} placeholder="Minimal 6 karakter" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-set-password">Konfirmasi Password</Label>
+                <Input id="confirm-set-password" type="password" minLength={6} placeholder="Ulangi password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} />
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={savingPassword || !newPassword}
+                onClick={async () => {
+                  if (newPassword.length < 6) { toast.error("Password minimal 6 karakter"); return; }
+                  if (newPassword !== confirmNewPassword) { toast.error("Password tidak cocok"); return; }
+                  setSavingPassword(true);
+                  const { error } = await supabase.auth.updateUser({ password: newPassword });
+                  setSavingPassword(false);
+                  if (error) { toast.error(error.message); } else {
+                    toast.success("Password berhasil diatur!");
+                    setNewPassword("");
+                    setConfirmNewPassword("");
+                  }
+                }}
+              >
+                {savingPassword ? "Menyimpan..." : "Simpan Password"}
               </Button>
             </div>
           )}
