@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import VendorAuth from "./pages/VendorAuth";
 import AdminAuth from "./pages/AdminAuth";
 import VendorOnboarding from "./pages/VendorOnboarding";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
