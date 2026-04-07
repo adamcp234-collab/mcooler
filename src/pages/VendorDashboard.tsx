@@ -65,6 +65,9 @@ export default function VendorDashboard() {
   const [profileLocation, setProfileLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [profilePhotos, setProfilePhotos] = useState<{ file: File; preview: string; type: string; label: string }[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (!loading) {
