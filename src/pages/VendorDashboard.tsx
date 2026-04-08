@@ -511,6 +511,15 @@ export default function VendorDashboard() {
             </div>
           </TabsContent>
 
+          <TabsContent value="daily-plan">
+            <DailyPlanTab
+              orders={orders}
+              mitraId={mitraId || ""}
+              mitraLat={mitraProfile?.latitude}
+              mitraLng={mitraProfile?.longitude}
+            />
+          </TabsContent>
+
           <TabsContent value="services" className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Aktifkan layanan yang Anda tawarkan. Isi harga & deskripsi untuk setiap layanan aktif.
