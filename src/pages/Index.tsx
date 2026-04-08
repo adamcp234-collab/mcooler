@@ -13,14 +13,6 @@ export default function Index() {
             <Snowflake className="w-6 h-6 text-primary" />
             <span className="font-extrabold text-lg text-foreground tracking-tight">MCOOLER</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/vendor/auth">
-              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm">Masuk</Button>
-            </Link>
-            <Link to="/booking">
-              <Button size="sm" className="font-semibold">Booking Sekarang</Button>
-            </Link>
-          </div>
         </div>
       </nav>
 
@@ -50,11 +42,6 @@ export default function Index() {
               <Link to="/booking">
                 <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-base px-8 py-6 rounded-xl shadow-lg">
                   Booking Servis AC Sekarang <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-              <Link to="/vendor/auth">
-                <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold text-base px-6 py-6 rounded-xl">
-                  Daftar Sebagai Vendor
                 </Button>
               </Link>
             </div>
