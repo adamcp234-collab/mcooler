@@ -44,11 +44,6 @@ export default function Index() {
                   Booking Servis AC Sekarang <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              <Link to="/vendor/auth">
-                <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold text-base px-6 py-6 rounded-xl">
-                  Daftar Sebagai Vendor
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
