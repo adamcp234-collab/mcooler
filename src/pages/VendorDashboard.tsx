@@ -443,10 +443,13 @@ export default function VendorDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="orders">
               Order
               {stats.pending > 0 && <span className="ml-1 bg-warning text-warning-foreground text-[10px] rounded-full px-1.5">{stats.pending}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="daily-plan">
+              <CalendarClock className="w-3.5 h-3.5 mr-1" /> Rencana
             </TabsTrigger>
             <TabsTrigger value="services">Layanan</TabsTrigger>
             <TabsTrigger value="reminders">
