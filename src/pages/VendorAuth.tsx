@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
 import { toast } from "sonner";
 import { translateError } from "@/lib/errorMessages";
 import Header from "@/components/Header";
@@ -90,14 +90,16 @@ export default function VendorAuth() {
 
   const handleGoogleLogin = async () => {
     setSubmitting(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/vendor/auth",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/vendor/auth",
+      },
     });
     setSubmitting(false);
-    if (result.error) {
-      toast.error(translateError(result.error.message) || "Google login gagal");
+    if (error) {
+      toast.error(translateError(error.message) || "Google login gagal");
     }
-    // After redirect back, useEffect will handle navigation
   };
 
   return (
