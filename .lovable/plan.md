@@ -1,88 +1,49 @@
-## Notifikasi WhatsApp Otomatis via Fonnte
 
-### Ringkasan
 
-Membuat 2 edge function + 1 cron job untuk:
+## Rebranding MCOOLER → ACcare
 
-1. **Notifikasi vendor saat order baru** — dipicu otomatis via database webhook
-2. **Reminder service rutin ke customer** — dikirim otomatis di hari jatuh tempo remiander pada  jam 05:00-07:00 random, contoh. remainder aktif di tanggal 16/05/2026 maka di tanggal tersebut notifikasi whatsapp ke customer dijalankan
+Mengganti semua referensi nama brand "MCOOLER" menjadi "ACcare" di seluruh aplikasi.
 
-### Arsitektur
+### File yang perlu diubah
 
-```text
-[Order Baru] → DB Trigger → pg_net → Edge Function "notify-vendor-new-order" → Fonnte API → WhatsApp Vendor
+**1. `index.html`** — Title, meta tags (og:title, twitter:title, description, author)
 
-[Cron 05:00 WIB] → pg_cron → pg_net → Edge Function "send-service-reminders" → Fonnte API → WhatsApp Customer
-```
+**2. `src/index.css`** — Rename CSS classes:
+- `.mcooler-gradient` → `.accare-gradient`
+- `.mcooler-hero-gradient` → `.accare-hero-gradient`
+- `.mcooler-card` → `.accare-card`
+- `.mcooler-elevated` → `.accare-elevated`
 
-### Langkah Implementasi
+**3. `src/components/Header.tsx`** — Brand text & gradient class
 
-**1. Simpan Fonnte Token sebagai Secret**
+**4. `src/pages/Index.tsx`** — Brand text di navbar, hero, footer, dan CTA section + class names
 
-- Menggunakan tool `add_secret` untuk menyimpan `FONNTE_TOKEN` di backend
+**5. `src/pages/AdminAuth.tsx`** — Teks "administrator MCOOLER" + class names
 
-**2. Edge Function: `notify-vendor-new-order**`
+**6. `src/pages/BookingPage.tsx`** — Class names (`mcooler-gradient`)
 
-- Menerima payload order baru dari database webhook
-- Query `ms_mitra_det` untuk mendapatkan nomor WA vendor dan koordinat vendor
-- Hitung jarak (haversine) antara lokasi customer dan vendor
-- Generate link Google Maps dari koordinat customer
-- Kirim pesan WA ke vendor via Fonnte API (`https://api.fonnte.com/send`) berisi:
-  - Jarak (km)
-  - Link Google Maps
-  - Tanggal & jam kunjungan
-  - Layanan yang dipilih
-  - Link dashboard: `https://accare.pages.dev/vendor`
-  - Pesan: "Silahkan kelola pesanan melalui dashboard Anda"
-  - **TANPA** nama, WA, email, alamat customer (sesuai aturan anti-direct selling)
+**7. `src/pages/VendorOnboarding.tsx`** — Class names
 
-**3. Database Trigger: Auto-notify on new order**
+**8. `src/pages/VendorDashboard.tsx`** — Class names
 
-- Menggunakan `pg_net` untuk memanggil edge function saat INSERT ke `ec_order_head`
-- Trigger akan mengirim `order_id` dan data non-PII ke edge function
+**9. `src/components/DailyPlanTab.tsx`** — Class names
 
-**4. Edge Function: `send-service-reminders**`
+**10. `src/components/RemindersTab.tsx`** — Class names
 
-- Query `service_reminders` where `is_sent = false` AND `reminder_date <= today`
-- Untuk setiap reminder yang jatuh tempo, kirim pesan WA ke customer via Fonnte
-- Update `is_sent = true` dan `sent_at = now()` setelah berhasil kirim
+**11. `src/pages/AdminDashboard.tsx`** — Class names (jika ada)
 
-**5. Cron Job: Daily reminder at 05:00 WIB (UTC+7 = 22:00 UTC)**
+**12. `src/pages/OrderSuccess.tsx`** — Class names (jika ada)
 
-- Menggunakan `pg_cron` + `pg_net` untuk memanggil edge function `send-service-reminders` setiap hari jam 22:00 UTC (= 05:00 WIB)
+**13. `src/pages/VendorAuth.tsx`** — Class names (jika ada)
 
-### Format Pesan WhatsApp
+**14. Edge Functions** — Update URL `accare.pages.dev` references (sudah benar)
 
-**Vendor (Order Baru):**
+**15. Memory files** — Update `.lovable/memory/index.md` jika ada referensi MCOOLER
 
-```
-🔔 *Pesanan Baru!*
+### Pendekatan
+Find-and-replace global:
+- `MCOOLER` → `ACcare` (brand text)
+- `mcooler-` → `accare-` (CSS class prefix)
 
-📍 Jarak: 3.2 km
-🗺️ Lokasi: https://maps.google.com/?q=-6.xxx,106.xxx
-📅 Tanggal: 15 April 2026
-⏰ Jam: 09:00
-🔧 Layanan: Cuci AC, Isi Freon
+Semua perubahan bersifat kosmetik/branding, tidak ada perubahan logika atau database.
 
-Silahkan kelola pesanan melalui dashboard Anda:
-https://accare.pages.dev/vendor
-
-Jawab "siap" untuk konfirmasi.
-```
-
-**Customer (Reminder):**
-
-```
-Halo [Nama]! 👋
-
-Ini pengingat bahwa sudah waktunya untuk service AC rutin Anda.
-
-Layanan terakhir: [service_summary]
-
-Silakan hubungi kami untuk menjadwalkan service berikutnya https://accare.pages.dev/. Terima kasih! 🙏
-```
-
-### Kebutuhan dari Anda
-
-- Token Fonnte (akan diminta saat implementasi)
-- Pastikan extension `pg_net` dan `pg_cron` aktif (akan diaktifkan via migration)
