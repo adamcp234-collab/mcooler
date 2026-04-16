@@ -54,7 +54,13 @@ Deno.serve(async (req) => {
       const delayMs = Math.floor(Math.random() * 5000); // small delay between messages
       if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
 
-      const companyName = (reminder.ms_mitra_det as any)?.company_name || "Kami";
+      // Get vendor company name
+      const { data: mitra } = await supabase
+        .from("ms_mitra_det")
+        .select("company_name")
+        .eq("mitra_id", reminder.mitra_id)
+        .single();
+      const companyName = mitra?.company_name || "Kami";
 
       const message = `Halo ${reminder.cust_name}! 👋
 
