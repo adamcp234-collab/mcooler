@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     // Query reminders that are due and not yet sent
     const { data: reminders, error } = await supabase
       .from("service_reminders")
-      .select("*, ms_mitra_det:mitra_id(company_name)")
+      .select("*")
       .eq("is_sent", false)
       .lte("reminder_date", today)
       .limit(50);
