@@ -11,7 +11,7 @@ export default function Index() {
         <div className="container max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <Snowflake className="w-6 h-6 text-primary" />
-            <span className="font-extrabold text-lg text-foreground tracking-tight">MCOOLER</span>
+            <span className="font-extrabold text-lg text-foreground tracking-tight">ACcare</span>
           </Link>
         </div>
       </nav>
@@ -52,7 +52,7 @@ export default function Index() {
       {/* Features Grid */}
       <section className="bg-card">
         <div className="container max-w-6xl mx-auto px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-3">Kenapa Memilih MCOOLER?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-3">Kenapa Memilih ACcare?</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-lg mx-auto">
             Platform all-in-one untuk vendor dan pelanggan servis AC.
           </p>
@@ -100,7 +100,7 @@ export default function Index() {
       </section>
 
       {/* Vendor CTA */}
-      <section className="mcooler-hero-gradient">
+      <section className="accare-hero-gradient">
         <div className="container max-w-6xl mx-auto px-4 py-16 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground mb-4">Siap Bergabung Sebagai Vendor?</h2>
           <p className="text-primary-foreground/80 text-base leading-relaxed max-w-md mx-auto mb-8">
@@ -119,9 +119,9 @@ export default function Index() {
         <div className="container max-w-6xl mx-auto px-4 py-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <Snowflake className="w-5 h-5 text-primary" />
-            <span className="font-bold text-foreground">MCOOLER</span>
+            <span className="font-bold text-foreground">ACcare</span>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 MCOOLER. Semua hak dilindungi.</p>
+          <p className="text-xs text-muted-foreground">© 2026 ACcare. Semua hak dilindungi.</p>
         </div>
       </footer>
     </div>

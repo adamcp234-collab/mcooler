@@ -138,7 +138,7 @@ export default function RemindersTab({ mitraId }: RemindersTabProps) {
                 <Button
                   size="sm"
                   variant={isDue ? "default" : "outline"}
-                  className={cn("w-full", isDue && "mcooler-gradient")}
+                  className={cn("w-full", isDue && "accare-gradient")}
                   onClick={() => sendWhatsAppReminder(reminder)}
                 >
                   <MessageCircle className="w-3.5 h-3.5 mr-1" /> Kirim via WhatsApp

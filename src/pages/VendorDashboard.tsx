@@ -432,7 +432,7 @@ export default function VendorDashboard() {
             { label: "Aktif", value: stats.active, icon: Clock, color: "text-primary" },
             { label: "Pendapatan", value: `Rp ${(revenue / 1000).toFixed(0)}K`, icon: CheckCircle, color: "text-success" },
           ].map(({ label, value, icon: Icon, color }) => (
-            <Card key={label} className="mcooler-card">
+            <Card key={label} className="accare-card">
               <CardContent className="p-3 text-center">
                 <Icon className={cn("w-5 h-5 mx-auto mb-1", color)} />
                 <p className="text-lg font-bold text-foreground">{value}</p>
@@ -576,7 +576,7 @@ export default function VendorDashboard() {
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          className="mcooler-gradient"
+                          className="accare-gradient"
                           onClick={() => saveServiceMutation.mutate({ masterServiceId: ms.id })}
                           disabled={saveServiceMutation.isPending}
                         >
@@ -753,7 +753,7 @@ export default function VendorDashboard() {
                 <div className="space-y-2 pt-2">
                   {nextStatus(selectedOrder.status) && (
                     <Button
-                      className="w-full mcooler-gradient"
+                      className="w-full accare-gradient"
                       disabled={statusMutation.isPending}
                       onClick={() => {
                         const next = nextStatus(selectedOrder.status)!;
@@ -988,7 +988,7 @@ export default function VendorDashboard() {
               </div>
 
               <Button
-                className="w-full mcooler-gradient"
+                className="w-full accare-gradient"
                 onClick={() => saveProfileMutation.mutate()}
                 disabled={saveProfileMutation.isPending}
               >
@@ -1057,7 +1057,7 @@ export default function VendorDashboard() {
                 <Textarea value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} placeholder="Alasan perubahan jadwal..." rows={2} />
               </div>
               <Button
-                className="w-full mcooler-gradient"
+                className="w-full accare-gradient"
                 disabled={!rescheduleDate || !rescheduleTime}
                 onClick={async () => {
                   if (!selectedOrder || !mitraId) return;
@@ -1136,7 +1136,7 @@ export default function VendorDashboard() {
             </div>
             <div className="flex gap-2">
               <Button
-                className="flex-1 mcooler-gradient"
+                className="flex-1 accare-gradient"
                 disabled={!reminderDays || statusMutation.isPending}
                 onClick={async () => {
                   if (!completingOrderId) return;
