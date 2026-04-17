@@ -207,7 +207,7 @@ export default function VendorOnboarding() {
         </div>
 
         {step === 1 && (
-          <Card className="mcooler-elevated">
+          <Card className="accare-elevated">
             <CardHeader>
               <CardTitle>Data Usaha</CardTitle>
               <CardDescription>Lengkapi informasi usaha Anda</CardDescription>
@@ -239,7 +239,7 @@ export default function VendorOnboarding() {
                   <p className="text-xs text-muted-foreground">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
                 )}
               </div>
-              <Button className="w-full mcooler-gradient" onClick={handleSaveProfile} disabled={submitting}>
+              <Button className="w-full accare-gradient" onClick={handleSaveProfile} disabled={submitting}>
                 {submitting ? "Menyimpan..." : "Selanjutnya"}
               </Button>
             </CardContent>
@@ -247,7 +247,7 @@ export default function VendorOnboarding() {
         )}
 
         {step === 2 && (
-          <Card className="mcooler-elevated">
+          <Card className="accare-elevated">
             <CardHeader>
               <CardTitle>Upload Foto</CardTitle>
               <CardDescription>Upload foto wajib dan dokumen pendukung</CardDescription>
@@ -329,7 +329,7 @@ export default function VendorOnboarding() {
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Kembali</Button>
-                <Button className="flex-1 mcooler-gradient" onClick={handleSubmitPhotos} disabled={submitting}>
+                <Button className="flex-1 accare-gradient" onClick={handleSubmitPhotos} disabled={submitting}>
                   {submitting ? "Mengupload..." : "Kirim Pendaftaran"}
                 </Button>
               </div>
@@ -338,7 +338,7 @@ export default function VendorOnboarding() {
         )}
 
         {step === 3 && (
-          <Card className="mcooler-elevated text-center">
+          <Card className="accare-elevated text-center">
             <CardContent className="py-12 space-y-4">
               <CheckCircle className="w-16 h-16 mx-auto text-accent" />
               <h2 className="text-xl font-bold text-foreground">Pendaftaran Berhasil!</h2>

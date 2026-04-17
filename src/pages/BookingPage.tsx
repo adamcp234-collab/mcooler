@@ -318,11 +318,11 @@ export default function BookingPage() {
             </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} disabled={!canNext()} className="flex-1 mcooler-gradient">
+            <Button onClick={() => setStep(step + 1)} disabled={!canNext()} className="flex-1 accare-gradient">
               Lanjut <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={!canNext() || submitting} className="flex-1 mcooler-gradient">
+            <Button onClick={handleSubmit} disabled={!canNext() || submitting} className="flex-1 accare-gradient">
               {submitting ? "Memproses..." : "Kirim Order"}
             </Button>
           )}

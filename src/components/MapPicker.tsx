@@ -85,7 +85,7 @@ export default function MapPicker({ value, onChange, height = "300px" }: MapPick
           type="button"
           size="sm"
           onClick={handleSetLocation}
-          className="flex-1 mcooler-gradient"
+          className="flex-1 accare-gradient"
         >
           <Check className="w-4 h-4 mr-1" /> Set Lokasi
         </Button>

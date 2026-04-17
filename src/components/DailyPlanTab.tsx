@@ -363,7 +363,7 @@ export default function DailyPlanTab({ orders, mitraId, mitraLat, mitraLng }: Da
           {vendorPos && sortedOrders.some((o) => o.cust_latitude) && (
             <Button
               size="sm"
-              className="gap-1 text-xs mcooler-gradient ml-auto"
+              className="gap-1 text-xs accare-gradient ml-auto"
               onClick={() => window.open(getNavigationUrl(), "_blank")}
             >
               <Navigation className="w-3.5 h-3.5" />

@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Kelola mitra, order, dan layanan MCOOLER</p>
+            <p className="text-sm text-muted-foreground">Kelola mitra, order, dan layanan ACcare</p>
           </div>
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Logout</Button>
         </div>
@@ -144,7 +144,7 @@ export default function AdminDashboard() {
             { label: "Pending Verif", value: pendingVendors.length, icon: UserCheck, color: "text-warning" },
             { label: "Selesai", value: orders.filter((o) => o.status === "done").length, icon: TrendingUp, color: "text-primary" },
           ].map(({ label, value, icon: Icon, color }) => (
-            <Card key={label} className="mcooler-card">
+            <Card key={label} className="accare-card">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted">
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
               <p className="text-center text-muted-foreground py-8">Tidak ada vendor menunggu verifikasi.</p>
             ) : (
               pendingVendors.map((mitra) => (
-                <Card key={mitra.mitra_id} className="mcooler-card">
+                <Card key={mitra.mitra_id} className="accare-card">
                   <CardContent className="p-3">
                     <div className="flex justify-between items-start mb-1">
                       <div>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
               <Input placeholder="Cari order..." value={searchOrders} onChange={(e) => setSearchOrders(e.target.value)} className="pl-9" />
             </div>
             {filteredOrders.map((order) => (
-              <Card key={order.order_id} className="mcooler-card">
+              <Card key={order.order_id} className="accare-card">
                 <CardContent className="p-3">
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-medium text-sm text-foreground">{order.order_id}</span>
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
             {filteredMitras.map((mitra) => {
               const regStatus = (mitra as any).registration_status;
               return (
-                <Card key={mitra.mitra_id} className="mcooler-card">
+                <Card key={mitra.mitra_id} className="accare-card">
                   <CardContent className="p-3">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-sm text-foreground">{mitra.company_name}</span>

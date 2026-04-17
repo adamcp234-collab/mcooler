@@ -106,10 +106,10 @@ export default function VendorAuth() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container max-w-md px-4 py-10">
-        <Card className="mcooler-elevated">
+        <Card className="accare-elevated">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Portal Vendor</CardTitle>
-            <CardDescription>Daftar atau masuk sebagai mitra MCOOLER</CardDescription>
+            <CardDescription>Daftar atau masuk sebagai mitra ACcare</CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -147,7 +147,7 @@ export default function VendorAuth() {
                     <Label htmlFor="login-password">Password</Label>
                     <Input id="login-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
                   </div>
-                  <Button type="submit" className="w-full mcooler-gradient" disabled={submitting}>
+                  <Button type="submit" className="w-full accare-gradient" disabled={submitting}>
                     {submitting ? "Memproses..." : "Login"}
                   </Button>
                   <div className="text-center">
@@ -191,7 +191,7 @@ export default function VendorAuth() {
                     <Label htmlFor="reg-password">Password</Label>
                     <Input id="reg-password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
                   </div>
-                  <Button type="submit" className="w-full mcooler-gradient" disabled={submitting}>
+                  <Button type="submit" className="w-full accare-gradient" disabled={submitting}>
                     {submitting ? "Memproses..." : "Daftar Sebagai Vendor"}
                   </Button>
                 </form>

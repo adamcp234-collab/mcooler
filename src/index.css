@@ -93,16 +93,16 @@
 }
 
 @layer components {
-  .mcooler-gradient {
+  .accare-gradient {
     background: var(--gradient-primary);
   }
-  .mcooler-hero-gradient {
+  .accare-hero-gradient {
     background: var(--gradient-hero);
   }
-  .mcooler-card {
+  .accare-card {
     box-shadow: var(--shadow-card);
   }
-  .mcooler-elevated {
+  .accare-elevated {
     box-shadow: var(--shadow-elevated);
   }
 }

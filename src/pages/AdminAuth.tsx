@@ -55,10 +55,10 @@ export default function AdminAuth() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container max-w-md px-4 py-10">
-        <Card className="mcooler-elevated">
+        <Card className="accare-elevated">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Admin Login</CardTitle>
-            <CardDescription>Masuk sebagai administrator MCOOLER</CardDescription>
+            <CardDescription>Masuk sebagai administrator ACcare</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
@@ -90,7 +90,7 @@ export default function AdminAuth() {
                 <Label htmlFor="admin-password">Password</Label>
                 <Input id="admin-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
               </div>
-              <Button type="submit" className="w-full mcooler-gradient" disabled={submitting}>
+              <Button type="submit" className="w-full accare-gradient" disabled={submitting}>
                 {submitting ? "Memproses..." : "Login Admin"}
               </Button>
             </form>
